@@ -109,6 +109,15 @@ int main() {
       }
  
       instance.depot_id = id;
+    } else {
+      std::istringstream ss(line);
+      std::string chave, separador, valor;
+      
+      ss >> chave >> separador >> valor;
+
+      if (chave == "CAPACITY") {
+        std::stoi(valor, nullptr, 10); 
+      }
     }
   }
 
