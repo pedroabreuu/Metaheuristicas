@@ -3,6 +3,7 @@
 #include <string>
 #include <algorithm>
 #include <vector>
+#include <sstream>
 
 enum class Section {
   NONE,
@@ -19,8 +20,8 @@ struct Node {
 
 struct VRPInstance {
   int depot_id; 
-  int capacity;
-  std::vector<Node> nodes;
+  int capacity;  
+  std::vector<Node> nodes;  
   std::string name;
 };
 
@@ -52,25 +53,54 @@ int main() {
         return 1;
   }
  
-  Section current_section = Section::NONE; 
+  Section current_section = Section::NONE;
+
+  VRPInstance instance; 
 
   while(getline(inFile, line)) {
     std::cout << "[" << trim(line) << "]" << std::endl;
-    if (line == "NODE_COORD_SECTION") {
-      current_section = Section::NODE_COORD;
+
+    if (trim(line) == "NODE_COORD_SECTION") {
+      current_section = Section::NODE_COORD;  
       continue;
     }
-    else if (line == "DEMAND_SECTION") {
-        current_section = Section::DEMAND;
-        continue;
+    else if (trim(line) == "DEMAND_SECTION") {
+      current_section = Section::DEMAND;
+      continue;
     }
-    else if (line == "DEPOT_SECTION") {
-        current_section = Section::DEPOT;
-        continue;
+    else if (trim(line) == "DEPOT_SECTION") {
+      current_section = Section::DEPOT;
+      continue;
+    }
+
+    if (current_section == Section::NODE_COORD) {
+      std::istringstream ss(line);
+
+      Node node;    
+      ss >> node.id >> node.x >> node.y;
+      instance.nodes.push_back(node);
+    }
+    else if (current_section == Section::DEMAND) {
+      std::istringstream ss(line);
+      int id;
+      int demanda;
+      ss >> id >> demanda;
+
+      for (auto& node: instance.nodes) {
+        if (node.id == id) {
+          node.demanda = demanda;
+          break;
+        }
+      }
     }
   }
 
-    inFile.close();
 
-    return 0;
+  for (const auto& node : instance.nodes) {
+       std::cout << "[" <<node.id << " " << node.x << " " << node.y << "]" << std::endl;
+  }
+
+  inFile.close();
+
+  return 0;
 }
