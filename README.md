@@ -5,16 +5,15 @@ Implementações de metaheurísticas aplicadas a problemas de otimização combi
 ## Estrutura do repositório
 ```
 Metaheuristicas/
-└── problems/
-    └── cvrp/        ← Capacitated Vehicle Routing Problem
-        ├── include/ ← Headers (.h)
-        ├── src/     ← Código-fonte (.cpp)
-        ├── data/    ← Instâncias de teste (.vrp)
-        └── results/ ← Saídas geradas (ignorado pelo git)
+└── cvrp/        ← Capacitated Vehicle Routing Problem
+    ├── include/ ← Headers (.h)
+    ├── src/     ← Código-fonte (.cpp)
+    ├── data/    ← Instâncias
+    └── results/ ← Saídas
 ```
 
 ## Problemas implementados
-- [CVRP](problems/cvrp/README.md)
+- [CVRP](problems/cvrp)
 
 ## Como compilar
 > Instruções de build serão adicionadas em breve.
