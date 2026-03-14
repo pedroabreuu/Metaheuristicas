@@ -80,6 +80,7 @@ int main() {
       ss >> node.id >> node.x >> node.y;
       instance.nodes.push_back(node);
     }
+
     else if (current_section == Section::DEMAND) {
       std::istringstream ss(line);
       int id;
@@ -93,12 +94,29 @@ int main() {
         }
       }
     }
-  }
 
+    else if (current_section == Section::DEPOT) {
+      std::istringstream ss(line);
+      int id;
+      ss >> id;
+
+      if (!ss >> id){
+        continue;
+      }
+
+      if (id == -1) {
+        continue;
+      }
+ 
+      instance.depot_id = id;
+    }
+  }
 
   for (const auto& node : instance.nodes) {
-       std::cout << "[" <<node.id << " " << node.x << " " << node.y << "]" << std::endl;
+       std::cout << "[" <<node.id << " " << node.x << " " << node.y << " " << node.demanda << "]" << std::endl;
   }
+
+  std::cout << "Depot ID: " << instance.depot_id << std::endl;
 
   inFile.close();
 
