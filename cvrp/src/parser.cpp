@@ -19,8 +19,9 @@ struct Node {
 };
 
 struct VRPInstance {
-  int depot_id; 
-  int capacity;  
+  int depot_id = 0; 
+  int capacity = 0;
+  int num_trucks = 0;
   std::vector<Node> nodes;  
   std::string name;
 };
@@ -58,7 +59,7 @@ int main() {
   VRPInstance instance; 
 
   while(getline(inFile, line)) {
-    std::cout << "[" << trim(line) << "]" << std::endl;
+    /* std::cout << "[" << trim(line) << "]" << std::endl; */
 
     if (trim(line) == "NODE_COORD_SECTION") {
       current_section = Section::NODE_COORD;  
@@ -114,18 +115,29 @@ int main() {
       std::string chave, separador, valor;
       
       ss >> chave >> separador >> valor;
+      
+      if (chave == "COMMENT") {
+        size_t pos = line.find("No of trucks");
+        if (pos != std::string::npos) {
+          pos = line.find(':', pos);
+          instance.num_trucks = std::stoi(line.substr(pos + 1));
+        }
+      }
 
       if (chave == "CAPACITY") {
-        std::stoi(valor, nullptr, 10); 
+        instance.capacity = std::stoi(valor);
       }
     }
   }
 
-  for (const auto& node : instance.nodes) {
-       std::cout << "[" <<node.id << " " << node.x << " " << node.y << " " << node.demanda << "]" << std::endl;
-  }
+  // for (const auto& node : instance.nodes) {
+  //      std::cout << "[" <<node.id << " " << node.x << " " << node.y << " " << node.demanda << "]" << std::endl;
+  // }
 
   std::cout << "Depot ID: " << instance.depot_id << std::endl;
+  std::cout << "Capacidade: " << instance.capacity << std::endl;
+  std::cout << "Número de nós: " << instance.nodes.size() << std::endl;
+  std::cout << "Número de caminhões: " << instance.num_trucks << std::endl;
 
   inFile.close();
 
