@@ -1,5 +1,5 @@
 #include <iostream>
-#include "../include/parser.h"
+#include "parser.h"
 
 int main(int argc, char* argv[]) {
     std::string filepath = (argc > 1) ? argv[1] : "data/A-n32-k5.vrp";

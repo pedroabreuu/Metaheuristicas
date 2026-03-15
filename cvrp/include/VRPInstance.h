@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <cmath>
+#include <stdexcept>
 #include "Node.h"
 
 struct VRPInstance {
