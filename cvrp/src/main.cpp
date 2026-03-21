@@ -2,6 +2,7 @@
 #include "parser.h"
 #include "nearestNeighbor.h"
 #include "CWSavings.h"
+#include "2opt.h"
 
 int main(int argc, char* argv[]) {
     std::string filepath = (argc > 1) ? argv[1] : "data/A-n32-k5.vrp";
@@ -12,6 +13,8 @@ int main(int argc, char* argv[]) {
         solucaoNN.calculaCusto(instance);
         Solution solucaoCW = clarkeWright(instance);
         solucaoCW.calculaCusto(instance);
+        Solution solucao2opt = opt2(solucaoCW, instance);
+        solucao2opt.calculaCusto(instance);
 
         std::cout << "Instância carregada.\n";
         std::cout << "Depot ID:     " << instance.depot_id   << "\n";
@@ -24,6 +27,10 @@ int main(int argc, char* argv[]) {
         
         std::cout << "========Clarke-Wright========" << "\n";
         solucaoCW.imprime(instance);
+
+        std::cout << "========2-opt========" << "\n";
+        solucao2opt.imprime(instance);
+
     }
     catch (const std::exception& e) {
         std::cerr << "Erro: " << e.what() << "\n";
