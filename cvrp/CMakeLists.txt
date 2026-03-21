@@ -12,6 +12,7 @@ add_executable(cvrp
     src/parser.cpp
     src/Solution.cpp
     src/nearestNeighbor.cpp
+    src/CWSavings.cpp
 )
 
 target_include_directories(cvrp PRIVATE include)

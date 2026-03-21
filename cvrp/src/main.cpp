@@ -1,6 +1,7 @@
 #include <iostream>
 #include "parser.h"
 #include "nearestNeighbor.h"
+#include "CWSavings.h"
 
 int main(int argc, char* argv[]) {
     std::string filepath = (argc > 1) ? argv[1] : "data/A-n32-k5.vrp";
@@ -9,13 +10,20 @@ int main(int argc, char* argv[]) {
         VRPInstance instance = parseVRP(filepath);
         Solution solucaoNN = nearestN(instance);
         solucaoNN.calculaCusto(instance);
+        Solution solucaoCW = clarkeWright(instance);
+        solucaoCW.calculaCusto(instance);
 
         std::cout << "Instância carregada.\n";
         std::cout << "Depot ID:     " << instance.depot_id   << "\n";
         std::cout << "Capacidade:   " << instance.capacity   << "\n";
         std::cout << "Nós:          " << instance.nodes.size() << "\n";
         std::cout << "Caminhões:    " << instance.num_trucks  << "\n";
+
+        std::cout << "========Nearest Neighbor========" << "\n";
         solucaoNN.imprime(instance);
+        
+        std::cout << "========Clarke-Wright========" << "\n";
+        solucaoCW.imprime(instance);
     }
     catch (const std::exception& e) {
         std::cerr << "Erro: " << e.what() << "\n";
