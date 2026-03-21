@@ -26,17 +26,17 @@ void Solution::imprime(const VRPInstance& instance) const {
   int depot = instance.depot_id;
   
   for (size_t i = 0; i < rotas.size(); i++) {
-    std::cout << "Rota: " << i + 1 << "\n";
-    std::cout << depot;
+    std::cout << "Route" << "#" << i + 1<< ": ";
+    std::cout << depot - 1;
 
     for (size_t j = 0; j < rotas[i].size(); j++) {
-      std::cout << "->" <<rotas[i][j];  
+      std::cout << " " <<rotas[i][j] - 1;  
     }
 
-    std::cout << "->" << depot << std::endl;
+    std::cout << " " << depot - 1 << std::endl;
   }
 
-  std::cout << "Custo final: " << custoTotal << std::endl;
+  std::cout << "Cost " << custoTotal << std::endl;
 }
 
 
