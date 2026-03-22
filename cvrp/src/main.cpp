@@ -3,6 +3,7 @@
 #include "nearestNeighbor.h"
 #include "CWSavings.h"
 #include "2opt.h"
+#include "relocate.h"
 
 int main(int argc, char* argv[]) {
     std::string filepath = (argc > 1) ? argv[1] : "data/A-n32-k5.vrp";
@@ -15,6 +16,8 @@ int main(int argc, char* argv[]) {
         solucaoCW.calculaCusto(instance);
         Solution solucao2opt = opt2(solucaoCW, instance);
         solucao2opt.calculaCusto(instance);
+        Solution solucaoRelocate = relocate(solucao2opt, instance);
+        solucaoRelocate.calculaCusto(instance);
 
         std::cout << "Instância carregada.\n";
         std::cout << "Depot ID:     " << instance.depot_id   << "\n";
@@ -30,6 +33,9 @@ int main(int argc, char* argv[]) {
 
         std::cout << "========2-opt========" << "\n";
         solucao2opt.imprime(instance);
+
+        std::cout << "========Relocate========" << "\n";
+        solucaoRelocate.imprime(instance);
 
     }
     catch (const std::exception& e) {

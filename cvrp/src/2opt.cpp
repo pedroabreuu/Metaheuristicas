@@ -2,7 +2,7 @@
 #include <algorithm>
 #include "2opt.h"
 
-const Node& buscaNode(const VRPInstance& instance, int id) {
+static const Node& buscaNode(const VRPInstance& instance, int id) {
     for (const auto& node : instance.nodes) {
         if (node.id == id) return node;
     }
