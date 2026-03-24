@@ -15,6 +15,7 @@ add_executable(cvrp
     src/CWSavings.cpp
     src/2opt.cpp
     src/relocate.cpp
+    src/SA.cpp
 )
 
 target_include_directories(cvrp PRIVATE include)

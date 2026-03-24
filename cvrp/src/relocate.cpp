@@ -68,3 +68,7 @@ Solution relocate(Solution solucao, const VRPInstance& instance) {
   }
   return solucao;
 }
+
+Solution randomRelocate(Solution solucao, const VRPInstance& instance) {
+  return solucao;
+}

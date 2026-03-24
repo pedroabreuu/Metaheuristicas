@@ -37,3 +37,7 @@ Solution opt2(Solution solucao, const VRPInstance& instance) {
 
     return solucao;
 }
+
+Solution randomOpt2(Solution solucao, const VRPInstance& instance) {
+  return solucao;
+}

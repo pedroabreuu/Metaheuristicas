@@ -8,4 +8,5 @@ struct Solution {
 
   void calculaCusto(const VRPInstance& instance);
   void imprime(const VRPInstance& instance) const;
+  int getCusto() const;
 };
