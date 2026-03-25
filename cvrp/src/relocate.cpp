@@ -1,13 +1,7 @@
 #include <vector>
 #include <algorithm>
+#include <random>
 #include "relocate.h"
-
-static const Node& buscaNode(const VRPInstance& instance, int id) {
-    for (const auto& node : instance.nodes) {
-        if (node.id == id) return node;
-    }
-    throw std::runtime_error("Nó não encontrado");
-}
 
 Solution relocate(Solution solucao, const VRPInstance& instance) {
   const Node& depot = instance.getDepot();
@@ -20,9 +14,9 @@ Solution relocate(Solution solucao, const VRPInstance& instance) {
         int melhorRotaDestino = -1;
         int melhorPosInsercao = -1;
 
-        const Node& clienteNode = buscaNode(instance, solucao.rotas[i][j]);
-        const Node& antesOrigem = (j == 0) ? depot : buscaNode(instance, solucao.rotas[i][j-1]);
-        const Node& depoisOrigem = (j == solucao.rotas[i].size() - 1) ? depot : buscaNode(instance, solucao.rotas[i][j+1]);
+        const Node& clienteNode = instance.getNode(solucao.rotas[i][j]);
+        const Node& antesOrigem = (j == 0) ? depot : instance.getNode(solucao.rotas[i][j-1]);
+        const Node& depoisOrigem = (j == solucao.rotas[i].size() - 1) ? depot : instance.getNode(solucao.rotas[i][j+1]);
         double economiaRemocao = instance.distancia(antesOrigem, clienteNode) 
                                 + instance.distancia(clienteNode, depoisOrigem) 
                                 - instance.distancia(antesOrigem, depoisOrigem);
@@ -30,19 +24,14 @@ Solution relocate(Solution solucao, const VRPInstance& instance) {
         for (size_t k = 0; k < solucao.rotas.size(); k++) {
           if (k == i) continue;
           int demandaTotal = 0;
-          int demandaCliente = buscaNode(instance, solucao.rotas[i][j]).demanda;
+          int demandaCliente = instance.getNode(solucao.rotas[i][j]).demanda;
           for (int id: solucao.rotas[k]) {
-            for (const auto& node: instance.nodes) {
-              if (node.id == id) {
-                demandaTotal += node.demanda;
-                break;
-              }
-            }
+                demandaTotal += instance.getNode(id).demanda;
           }
           if (demandaTotal + demandaCliente > instance.capacity) continue;
           for (size_t l = 0; l <= solucao.rotas[k].size(); l++) {
-            const Node& antesDestino = (l == 0) ? depot : buscaNode(instance, solucao.rotas[k][l-1]);
-            const Node& depoisDestino = (l == solucao.rotas[k].size()) ? depot : buscaNode(instance, solucao.rotas[k][l]);
+            const Node& antesDestino = (l == 0) ? depot : instance.getNode(solucao.rotas[k][l-1]);
+            const Node& depoisDestino = (l == solucao.rotas[k].size()) ? depot : instance.getNode(solucao.rotas[k][l]);
             double custoInsercao = instance.distancia(antesDestino, clienteNode) 
                           + instance.distancia(clienteNode, depoisDestino) 
                           - instance.distancia(antesDestino, depoisDestino);
@@ -70,5 +59,30 @@ Solution relocate(Solution solucao, const VRPInstance& instance) {
 }
 
 Solution randomRelocate(Solution solucao, const VRPInstance& instance) {
+  static std::mt19937 gen(std::random_device{}());
+  std::uniform_int_distribution<> rotaOrigem(0, solucao.rotas.size()-1);
+  std::uniform_int_distribution<> rotaDestino(0, solucao.rotas.size()-2);
+
+  if (solucao.rotas.size() >= 2) {
+    int origem = rotaOrigem(gen);
+    int destino = rotaDestino(gen);
+
+    if (destino >= origem) {destino += 1;}
+
+    std::uniform_int_distribution<> rotaCliente(0, solucao.rotas[origem].size() - 1);
+    std::uniform_int_distribution<> posInsercao(0, solucao.rotas[destino].size());
+
+    int cliente = rotaCliente(gen);
+    int insercao = posInsercao(gen);
+    int clienteId = solucao.rotas[origem][cliente];
+
+    solucao.rotas[origem].erase(solucao.rotas[origem].begin() + cliente);
+    solucao.rotas[destino].insert(solucao.rotas[destino].begin() + insercao, clienteId);
+
+    if (solucao.rotas[origem].empty()) { solucao.rotas.erase(solucao.rotas.begin() + origem); }
+
+
+  } else { return solucao; }
+
   return solucao;
 }

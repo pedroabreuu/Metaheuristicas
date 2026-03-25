@@ -37,7 +37,7 @@ int main(int argc, char* argv[]) {
         std::cout << "========Relocate========" << "\n";
         solucaoRelocate.imprime(instance);
 
-        Solution solucaoSA = SimulatedAnnealing(solucaoCW, instance, 100.0, 100, 0.8);
+        Solution solucaoSA = SimulatedAnnealing(solucaoRelocate, instance, 1000.0, 2000, 0.9999);
         solucaoSA.calculaCusto(instance);
         std::cout << "========Simulated Annealing========" << "\n";
         solucaoSA.imprime(instance);

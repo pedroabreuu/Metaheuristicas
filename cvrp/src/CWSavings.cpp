@@ -48,23 +48,14 @@ Solution clarkeWright(const VRPInstance& instance) {
     if (rotaI != -1 && rotaJ != -1 && rotaI != rotaJ) {
       int demandaTotal = 0;
 
-      for (int id : solucao.rotas[rotaI]) {       // para cada cliente na rota I
-      for (const auto& node : instance.nodes) { // procura o nó com esse ID
-          if (node.id == id) {
-              demandaTotal += node.demanda;
-              break;
-          }
-        }
+      for (int id : solucao.rotas[rotaI]) {
+        demandaTotal += instance.getNode(id).demanda;
       }
 
-      for (int id : solucao.rotas[rotaJ]) {       // para cada cliente na rota I
-        for (const auto& node : instance.nodes) { // procura o nó com esse ID
-            if (node.id == id) {
-                demandaTotal += node.demanda;
-                break;
-            }
-        }
+      for (int id : solucao.rotas[rotaJ]) {
+        demandaTotal += instance.getNode(id).demanda;
       }
+
       if (demandaTotal <= instance.capacity) {
         bool iNoBack  = (savings[i].i == solucao.rotas[rotaI].back());
         bool jNoFront = (savings[i].j == solucao.rotas[rotaJ].front());

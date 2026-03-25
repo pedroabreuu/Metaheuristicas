@@ -4,6 +4,7 @@
 #include <string>
 #include <cmath>
 #include <stdexcept>
+#include <unordered_map>
 #include "Node.h"
 
 struct VRPInstance {
@@ -12,12 +13,20 @@ struct VRPInstance {
     int num_trucks = 0;
     std::vector<Node> nodes;
     std::string name;
+    std::unordered_map<int, size_t> mapa;
 
     const Node& getDepot() const {
-        for (const auto& node : nodes) {
-            if (node.id == depot_id) return node;
+        return getNode(depot_id);
+    }
+
+    void buildIndex() {
+        for (size_t i = 0; i < nodes.size(); i++) {
+            mapa[nodes[i].id] = i;
         }
-        throw std::runtime_error("Depósito não encontrado");
+    }
+
+    const Node& getNode(int id) const{
+        return nodes[mapa.at(id)];
     }
 
     double distancia(const Node& a, const Node& b) const {

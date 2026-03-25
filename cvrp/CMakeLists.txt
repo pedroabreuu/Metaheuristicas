@@ -19,4 +19,19 @@ add_executable(cvrp
 )
 
 target_include_directories(cvrp PRIVATE include)
-target_compile_options(cvrp PRIVATE -Wall -Wextra -g)
+
+target_compile_options(cvrp PRIVATE -Wall -Wextra)
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    target_compile_options(cvrp PRIVATE -O0 -g)
+
+elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
+    target_compile_options(cvrp PRIVATE
+        -O3
+        -march=native
+        -funroll-loops
+        -fomit-frame-pointer
+    )
+
+    target_link_options(cvrp PRIVATE -flto)
+endif()

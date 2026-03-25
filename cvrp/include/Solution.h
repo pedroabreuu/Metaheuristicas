@@ -7,6 +7,6 @@ struct Solution {
   int custoTotal = 0;
 
   void calculaCusto(const VRPInstance& instance);
-  void imprime(const VRPInstance& instance) const;
+  void imprime(const VRPInstance& instance) const; 
   int getCusto() const;
 };

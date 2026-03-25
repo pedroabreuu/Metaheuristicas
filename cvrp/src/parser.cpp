@@ -73,5 +73,6 @@ VRPInstance parseVRP(const std::string& filepath) {
     }
 
     inFile.close();
+    instance.buildIndex();
     return instance;
 }
