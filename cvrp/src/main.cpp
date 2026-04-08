@@ -1,4 +1,5 @@
 #include <iostream>
+#include <chrono>
 #include "parser.h"
 #include "nearestNeighbor.h"
 #include "CWSavings.h"
@@ -17,11 +18,14 @@ int main(int argc, char* argv[]) {
         std::cout << "Capacidade:   " << instance.capacity   << "\n";
         std::cout << "Nós:          " << instance.nodes.size() << "\n";
         std::cout << "Caminhões:    " << instance.num_trucks  << "\n";
+        std::cout << "Otimo conhecido: " << instance.optimal_value << "\n";
 
         Solution solucaoNN = nearestN(instance);
         solucaoNN.calculaCusto(instance);
         std::cout << "========Nearest Neighbor========" << "\n";
         solucaoNN.imprime(instance);
+
+        auto t0 = std::chrono::steady_clock::now();
 
         Solution solucaoCW = clarkeWright(instance);
         solucaoCW.calculaCusto(instance);
@@ -37,6 +41,10 @@ int main(int argc, char* argv[]) {
         solucaoRelocate.calculaCusto(instance);
         std::cout << "========Relocate========" << "\n";
         solucaoRelocate.imprime(instance);
+
+        auto t1 = std::chrono::steady_clock::now();
+        double tempoCW = std::chrono::duration<double>(t1 - t0).count();
+        std::cout << "CW+2opt+Relocate: " << solucaoRelocate.custoTotal << " em " << tempoCW << "s" << std::endl;
 
         Solution solucaoSA = SimulatedAnnealing(solucaoRelocate, instance, 1000.0, 1000, 0.995);
         solucaoSA.calculaCusto(instance);

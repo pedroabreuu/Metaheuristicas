@@ -4,6 +4,7 @@
 #include <vector>
 #include <climits>
 #include <unordered_set>
+#include <chrono>
 #include "Solution.h"
 #include "ga.h"
 #include "relocate.h"
@@ -158,6 +159,9 @@ Solution GeneticAlgorithm(const VRPInstance& instance, int numGeracoes, int tama
 
     std::cout << "Geracao 0 (inicial) | Melhor custo: " << melhorSolucao.custoTotal << std::endl;
 
+    auto inicio = std::chrono::steady_clock::now();
+	auto tempoBest = inicio;
+
 	for (int i = 0; i < numGeracoes; i++) {
 		std::nth_element(solucoes.begin(), solucoes.begin() + elitismo, solucoes.end(),
     		[](const Solution& a, const Solution& b) {
@@ -215,6 +219,7 @@ Solution GeneticAlgorithm(const VRPInstance& instance, int numGeracoes, int tama
 
         if (melhorAtual->custoTotal < melhorSolucao.custoTotal) {
             melhorSolucao = *melhorAtual;
+            tempoBest = std::chrono::steady_clock::now();
         }
 
         if ((i + 1) % 1 == 0 || i == numGeracoes - 1) {
@@ -224,7 +229,14 @@ Solution GeneticAlgorithm(const VRPInstance& instance, int numGeracoes, int tama
         }
 	}
 
-    std::cout << "Melhor custo encontrado: " << melhorSolucao.custoTotal << std::endl;
+	auto fim = std::chrono::steady_clock::now();
+	double tempoTotal = std::chrono::duration<double>(fim - inicio).count();
+	double tempoMelhor = std::chrono::duration<double>(tempoBest - inicio).count();
+
+	if (instance.optimal_value > 0 && melhorSolucao.custoTotal == instance.optimal_value)
+	    std::cout << "GA: Otimo encontrado em " << tempoMelhor << "s" << std::endl;
+	else
+	    std::cout << "GA: Melhor=" << melhorSolucao.custoTotal << " em " << tempoMelhor << "s (total: " << tempoTotal << "s)" << std::endl;
 
 	return melhorSolucao;
 }

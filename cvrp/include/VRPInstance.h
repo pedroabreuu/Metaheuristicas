@@ -11,6 +11,7 @@ struct VRPInstance {
     int depot_id  = 0;
     int capacity  = 0;
     int num_trucks = 0;
+    int optimal_value = 0;
     std::vector<Node> nodes;
     std::string name;
     std::unordered_map<int, size_t> mapa;

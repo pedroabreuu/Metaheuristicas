@@ -1,11 +1,14 @@
 #include <random>
 #include <iostream>
 #include <cmath>
+#include <chrono>
 #include "SA.h"
 #include "relocate.h"
 #include "2opt.h"
 
 Solution SimulatedAnnealing(Solution solucao, const VRPInstance& instance, double To, int SAmax, double alpha) {
+    auto inicio = std::chrono::steady_clock::now();
+    auto tempoBest = inicio;
     int iterT = 0;
     double Temp = To;
     double delta = 0.0;
@@ -41,6 +44,7 @@ Solution SimulatedAnnealing(Solution solucao, const VRPInstance& instance, doubl
                 corrente = sl;
                 if (corrente.custoTotal < best.custoTotal) {
                     best = corrente;
+                    tempoBest = std::chrono::steady_clock::now();
                 }
             } else {
                 double r = realdist(gen);
@@ -53,10 +57,26 @@ Solution SimulatedAnnealing(Solution solucao, const VRPInstance& instance, doubl
         }
         Temp *= alpha;
         //std::cout << "Temp=" << Temp << " best=" << best.custoTotal << std::endl;
-        std::cout << "Temp=" << Temp << " corrente=" << corrente.custoTotal << " best=" << best.custoTotal << std::endl;
+        //std::cout << "Temp=" << Temp << " corrente=" << corrente.custoTotal << " best=" << best.custoTotal << std::endl;
     }
 
-    //best = opt2(best, instance);
-    //best = relocate(best, instance);
+    best = opt2(best, instance);
+    best = relocate(best, instance);
+    best.calculaCusto(instance);
+
+    auto fim = std::chrono::steady_clock::now();
+    double tempoTotal = std::chrono::duration<double>(fim - inicio).count();
+
+    if (best.custoTotal < corrente.custoTotal) {
+        tempoBest = fim;
+    }
+
+    double tempoMelhor = std::chrono::duration<double>(tempoBest - inicio).count();
+
+    if (instance.optimal_value > 0 && best.custoTotal == instance.optimal_value)
+        std::cout << "SA: Otimo encontrado em " << tempoMelhor << "s" << std::endl;
+    else
+        std::cout << "SA: Melhor=" << best.custoTotal << " em " << tempoMelhor << "s (total: " << tempoTotal << "s)" << std::endl;
+
     return best;
 }

@@ -68,6 +68,11 @@ VRPInstance parseVRP(const std::string& filepath) {
                     pos = line.find(':', pos);
                     instance.num_trucks = std::stoi(line.substr(pos + 1));
                 }
+                size_t posOpt = line.find("Optimal value");
+                if (posOpt != std::string::npos) {
+                    posOpt = line.find(':', posOpt);
+                    instance.optimal_value = std::stoi(line.substr(posOpt + 1));
+                }
             }
         }
     }
