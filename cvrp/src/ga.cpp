@@ -224,11 +224,11 @@ Solution GeneticAlgorithm(const VRPInstance& instance, int numGeracoes, int tama
 
         if (instance.optimal_value > 0 && melhorSolucao.custoTotal == instance.optimal_value) break;
 
-        // if ((i + 1) % 1 == 0 || i == numGeracoes - 1) {
-        //     std::cout << "Geracao " << i + 1 
-        //               << " | Melhor geracao: " << melhorAtual->custoTotal 
-        //               << " | Melhor global: " << melhorSolucao.custoTotal << std::endl;
-        // }
+        if ((i + 1) % 100 == 0 || i == numGeracoes - 1) {
+            std::cout << "Geracao " << i + 1 
+                      << " | Melhor geracao: " << melhorAtual->custoTotal 
+                      << " | Melhor global: " << melhorSolucao.custoTotal << std::endl;
+        }
 	}
 
 	auto fim = std::chrono::steady_clock::now();
