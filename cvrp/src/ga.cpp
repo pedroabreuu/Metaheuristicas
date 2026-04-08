@@ -44,7 +44,7 @@ static Solution gerarSolucaoAleatoria(const VRPInstance& instance, std::mt19937&
 	return solucao;
 }
 
-static Solution selecaoTorneio(const std::vector<Solution>& solucoes, int tamanhoTorneio, std::mt19937& gen) {
+static int selecaoTorneioIndice(const std::vector<Solution>& solucoes, int tamanhoTorneio, std::mt19937& gen) {
     std::uniform_int_distribution<> torneio(0, solucoes.size() - 1);
 
     int melhorIndice = torneio(gen);
@@ -56,7 +56,7 @@ static Solution selecaoTorneio(const std::vector<Solution>& solucoes, int tamanh
         }
     }
 
-    return solucoes[melhorIndice];
+    return melhorIndice;
 }
 
 static Solution crossoverOX(const Solution& pai1, const Solution& pai2, const VRPInstance& instance, std::mt19937& gen) {
@@ -167,23 +167,26 @@ Solution GeneticAlgorithm(const VRPInstance& instance, int numGeracoes, int tama
 		std::vector<Solution> novaGeracao(solucoes.begin(), solucoes.begin() + elitismo);
 
 		while (static_cast<int>(novaGeracao.size()) < tamanhoPopulacao) {
-	        Solution pai1 = selecaoTorneio(solucoes, tamanhoTorneio, gen);
-		    Solution pai2 = selecaoTorneio(solucoes, tamanhoTorneio, gen);
+	        int idx1 = selecaoTorneioIndice(solucoes, tamanhoTorneio, gen);
+		    int idx2 = selecaoTorneioIndice(solucoes, tamanhoTorneio, gen);
+
+		    int tentativas = 0;
+		    while (idx1 == idx2 && tentativas < 10) {
+		        idx2 = selecaoTorneioIndice(solucoes, tamanhoTorneio, gen);
+		        tentativas++;
+		    }
 
 		    Solution filho;
 
-		    if (probDist(gen) < probCrossover) {
-		        filho = crossoverOX(pai1, pai2, instance, gen);
+		    if (probDist(gen) < probCrossover && idx1 != idx2) {
+		        filho = crossoverOX(solucoes[idx1], solucoes[idx2], instance, gen);
 		    } else {
-		        filho = pai1;
+		        filho = solucoes[idx1];
 		    }
 
 		    if (probDist(gen) < probMutacao) {
-		        // if (probDist(gen) < 0.5) {
 		            filho = randomRelocate(filho, instance);
-		        //} else {
 		            filho = randomOpt2(filho, instance);
-		        //}
 	    	}
 
 	    	limpaRotasVazias(filho);
