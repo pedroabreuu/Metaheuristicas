@@ -12,6 +12,7 @@ Solution SimulatedAnnealing(Solution solucao, const VRPInstance& instance, doubl
     int iterT = 0;
     double Temp = To;
     double delta = 0.0;
+    bool achouOtimo = false;
     
     Solution best = solucao;
     Solution corrente = solucao;
@@ -25,9 +26,9 @@ Solution SimulatedAnnealing(Solution solucao, const VRPInstance& instance, doubl
     std::uniform_int_distribution<> movimento(0, 1);
     std::uniform_real_distribution<double> realdist(0.0, 1.0);
     
-    while (Temp > 0.0001) {
+    while (Temp > 0.0001 && !achouOtimo) {
         iterT = 0;
-        while (iterT < SAmax) {
+        while (iterT < SAmax && !achouOtimo) {
             int movimentoAle = movimento(gen);
             
             if (movimentoAle == 0) {
@@ -45,6 +46,7 @@ Solution SimulatedAnnealing(Solution solucao, const VRPInstance& instance, doubl
                 if (corrente.custoTotal < best.custoTotal) {
                     best = corrente;
                     tempoBest = std::chrono::steady_clock::now();
+                    if (instance.optimal_value > 0 && best.custoTotal == instance.optimal_value) { achouOtimo = true; }
                 }
             } else {
                 double r = realdist(gen);

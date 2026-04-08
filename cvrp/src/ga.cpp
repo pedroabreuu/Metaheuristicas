@@ -157,7 +157,7 @@ Solution GeneticAlgorithm(const VRPInstance& instance, int numGeracoes, int tama
 
     Solution melhorSolucao = *melhorGlobal;
 
-    std::cout << "Geracao 0 (inicial) | Melhor custo: " << melhorSolucao.custoTotal << std::endl;
+    //std::cout << "Geracao 0 (inicial) | Melhor custo: " << melhorSolucao.custoTotal << std::endl;
 
     auto inicio = std::chrono::steady_clock::now();
 	auto tempoBest = inicio;
@@ -222,11 +222,13 @@ Solution GeneticAlgorithm(const VRPInstance& instance, int numGeracoes, int tama
             tempoBest = std::chrono::steady_clock::now();
         }
 
-        if ((i + 1) % 1 == 0 || i == numGeracoes - 1) {
-            std::cout << "Geracao " << i + 1 
-                      << " | Melhor geracao: " << melhorAtual->custoTotal 
-                      << " | Melhor global: " << melhorSolucao.custoTotal << std::endl;
-        }
+        if (instance.optimal_value > 0 && melhorSolucao.custoTotal == instance.optimal_value) break;
+
+        // if ((i + 1) % 1 == 0 || i == numGeracoes - 1) {
+        //     std::cout << "Geracao " << i + 1 
+        //               << " | Melhor geracao: " << melhorAtual->custoTotal 
+        //               << " | Melhor global: " << melhorSolucao.custoTotal << std::endl;
+        // }
 	}
 
 	auto fim = std::chrono::steady_clock::now();

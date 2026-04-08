@@ -46,7 +46,7 @@ int main(int argc, char* argv[]) {
         double tempoCW = std::chrono::duration<double>(t1 - t0).count();
         std::cout << "CW+2opt+Relocate: " << solucaoRelocate.custoTotal << " em " << tempoCW << "s" << std::endl;
 
-        Solution solucaoSA = SimulatedAnnealing(solucaoRelocate, instance, 1000.0, 1000, 0.995);
+        Solution solucaoSA = SimulatedAnnealing(solucaoRelocate, instance, 1000.0, 2000, 0.9995);
         solucaoSA.calculaCusto(instance);
         std::cout << "========Simulated Annealing========" << "\n";
         solucaoSA.imprime(instance);
