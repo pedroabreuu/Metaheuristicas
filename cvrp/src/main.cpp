@@ -5,6 +5,7 @@
 #include "2opt.h"
 #include "relocate.h"
 #include "SA.h"
+#include "ga.h"
 
 int main(int argc, char* argv[]) {
     std::string filepath = (argc > 1) ? argv[1] : "data/A-n32-k5.vrp";
@@ -37,10 +38,36 @@ int main(int argc, char* argv[]) {
         std::cout << "========Relocate========" << "\n";
         solucaoRelocate.imprime(instance);
 
-        Solution solucaoSA = SimulatedAnnealing(solucaoRelocate, instance, 1000.0, 2000, 0.9999);
+        Solution solucaoSA = SimulatedAnnealing(solucaoRelocate, instance, 1000.0, 1000, 0.995);
         solucaoSA.calculaCusto(instance);
         std::cout << "========Simulated Annealing========" << "\n";
         solucaoSA.imprime(instance);
+
+        std::cout << "========Algoritmo Genético========" << "\n";
+        int tamanhoPopulacao, numGeracoes, tamanhoTorneio, elitismo;
+        double probMutacao, probCrossover;
+         
+        std::cout << "Tamanho da populacao: ";
+        std::cin >> tamanhoPopulacao;
+         
+        std::cout << "Numero de geracoes: ";
+        std::cin >> numGeracoes;
+         
+        std::cout << "Tamanho do torneio: ";
+        std::cin >> tamanhoTorneio;
+         
+        std::cout << "Elitismo (num. individuos): ";
+        std::cin >> elitismo;
+         
+        std::cout << "Probabilidade de mutacao (0.0 a 1.0): ";
+        std::cin >> probMutacao;
+         
+        std::cout << "Probabilidade de crossover (0.0 a 1.0): ";
+        std::cin >> probCrossover;
+         
+        Solution solucaoGA = GeneticAlgorithm(instance, numGeracoes, tamanhoPopulacao,
+                                               tamanhoTorneio, elitismo, probMutacao, probCrossover);
+        solucaoGA.imprime(instance);
     }
     catch (const std::exception& e) {
         std::cerr << "Erro: " << e.what() << "\n";
