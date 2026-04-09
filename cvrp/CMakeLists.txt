@@ -15,9 +15,9 @@ add_executable(cvrp
     src/utils/CWSavings.cpp
     src/neighborhoods/2opt.cpp
     src/neighborhoods/relocate.cpp
-    src/metaheuristics/SA.cpp
-    src/metaheuristics/ga.cpp
-    src/metaheuristics/BRKGA.cpp
+    src/metaheuristicas/SA.cpp
+    src/metaheuristicas/ga.cpp
+    src/metaheuristicas/BRKGA.cpp
 )
 
 target_include_directories(cvrp PRIVATE include)
