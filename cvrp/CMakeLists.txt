@@ -17,6 +17,7 @@ add_executable(cvrp
     src/relocate.cpp
     src/SA.cpp
     src/ga.cpp
+    src/BRKGA.cpp
 )
 
 target_include_directories(cvrp PRIVATE include)
