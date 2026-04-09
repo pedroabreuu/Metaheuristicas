@@ -157,7 +157,7 @@ Solution GeneticAlgorithm(const VRPInstance& instance, int numGeracoes, int tama
 
     Solution melhorSolucao = *melhorGlobal;
 
-    //std::cout << "Geracao 0 (inicial) | Melhor custo: " << melhorSolucao.custoTotal << std::endl;
+    std::cout << "Geracao 0 (inicial) | Melhor custo: " << melhorSolucao.custoTotal << std::endl;
 
     auto inicio = std::chrono::steady_clock::now();
 	auto tempoBest = inicio;
@@ -186,6 +186,8 @@ Solution GeneticAlgorithm(const VRPInstance& instance, int numGeracoes, int tama
 		        filho = crossoverOX(solucoes[idx1], solucoes[idx2], instance, gen);
 		    } else {
 		        filho = solucoes[idx1];
+		        //limpaRotasVazias(filho);
+		        filho = opt2(filho, instance);
 		    }
 
 		    if (probDist(gen) < probMutacao) {
@@ -193,17 +195,20 @@ Solution GeneticAlgorithm(const VRPInstance& instance, int numGeracoes, int tama
 		            filho = randomOpt2(filho, instance);
 	    	}
 
-	    	limpaRotasVazias(filho);
-			filho = relocate(filho, instance);
+	    	if (probDist(gen) < 0.3) {
+	    		limpaRotasVazias(filho);
+				filho = relocate(filho, instance);
 
-			limpaRotasVazias(filho);
-	    	filho = opt2(filho, instance);
+				limpaRotasVazias(filho);
+		    	filho = opt2(filho, instance);
 
-	    	limpaRotasVazias(filho);
-			filho = relocate(filho, instance);
-	    	
-			limpaRotasVazias(filho);
-	    	filho = opt2(filho, instance);
+		    	limpaRotasVazias(filho);
+				filho = relocate(filho, instance);
+		    	
+				limpaRotasVazias(filho);
+		    	filho = opt2(filho, instance);
+	    	}
+
 
 			limpaRotasVazias(filho);
 	    	filho.calculaCusto(instance);
