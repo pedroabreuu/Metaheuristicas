@@ -6,56 +6,73 @@
 
 Solution opt2(Solution solucao, const VRPInstance& instance) {
     const Node& depot = instance.getDepot();
+    const auto& nodes = instance.nodes;
+    const auto& mapa = instance.mapa;
+
+    auto nodeById = [&](int id) -> const Node& {
+        return nodes[mapa.at(id)];
+    };
 
     for (size_t i = 0; i < solucao.rotas.size(); i++) {
-      bool melhorou = true;
-      while(melhorou) {
-        melhorou = false;
-        for (size_t j = 0; j < solucao.rotas[i].size() - 1; j++) {
-          for (size_t k = j+1; k < solucao.rotas[i].size(); k++) {
-            const Node& noA = (j == 0) ? depot : instance.getNode(solucao.rotas[i][j-1]);
-            const Node& noB = instance.getNode(solucao.rotas[i][j]);
-            const Node& noC = instance.getNode(solucao.rotas[i][k]);
-            const Node& noD = (k == solucao.rotas[i].size() - 1) ? depot : instance.getNode(solucao.rotas[i][k+1]);
-            
-            double antes  = instance.distancia(noA, noB) + instance.distancia(noC, noD);
-            double depois = instance.distancia(noA, noC) + instance.distancia(noB, noD);
+        if (solucao.rotas[i].size() < 2) continue;
 
-            if (depois < antes) {
-              std::reverse(solucao.rotas[i].begin() + j, solucao.rotas[i].begin() + k + 1);
-              melhorou = true;
+        bool melhorou = true;
+        while (melhorou) {
+            melhorou = false;
+
+            for (size_t j = 0; j + 1 < solucao.rotas[i].size() && !melhorou; j++) {
+                for (size_t k = j + 1; k < solucao.rotas[i].size() && !melhorou; k++) {
+                    const Node& noA = (j == 0) ? depot : nodeById(solucao.rotas[i][j - 1]);
+                    const Node& noB = nodeById(solucao.rotas[i][j]);
+                    const Node& noC = nodeById(solucao.rotas[i][k]);
+                    const Node& noD =
+                        (k + 1 == solucao.rotas[i].size()) ? depot
+                                                            : nodeById(solucao.rotas[i][k + 1]);
+
+                    const double antes =
+                        instance.distancia(noA, noB) + instance.distancia(noC, noD);
+                    const double depois =
+                        instance.distancia(noA, noC) + instance.distancia(noB, noD);
+
+                    if (depois < antes) {
+                        std::reverse(solucao.rotas[i].begin() + j, solucao.rotas[i].begin() + k + 1);
+                        melhorou = true;
+                    }
+                }
             }
-          }
         }
-      }
     }
 
     return solucao;
 }
 
 Solution randomOpt2(Solution solucao, const VRPInstance& instance) {
-  static std::mt19937 gen(std::random_device{}());
-  std::uniform_int_distribution<> rota(0, solucao.rotas.size()-1);
+    static std::mt19937 gen(std::random_device{}());
 
-  int r = rota(gen);
+    if (solucao.rotas.empty()) {
+        return solucao;
+    }
 
-  if (solucao.rotas[r].size() >= 2) {
-    std::uniform_int_distribution<> verificacao(0, solucao.rotas[r].size() - 1);
+    std::uniform_int_distribution<> rota(0, static_cast<int>(solucao.rotas.size()) - 1);
+    int r = rota(gen);
+
+    if (solucao.rotas[r].size() < 2) {
+        return solucao;
+    }
+
+    std::uniform_int_distribution<> verificacao(0, static_cast<int>(solucao.rotas[r].size()) - 1);
     int j = verificacao(gen);
     int k = verificacao(gen);
 
-    if (j == k) {
-      while(j == k) { k = verificacao(gen); }
+    while (j == k) {
+        k = verificacao(gen);
     }
 
     if (j > k) {
-      std::swap(j, k);
+        std::swap(j, k);
     }
 
     std::reverse(solucao.rotas[r].begin() + j, solucao.rotas[r].begin() + k + 1);
 
-  } else { return solucao; }
-
-
-  return solucao;
+    return solucao;
 }
