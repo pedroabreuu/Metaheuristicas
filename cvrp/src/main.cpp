@@ -7,6 +7,7 @@
 #include "relocate.h"
 #include "SA.h"
 #include "ga.h"
+#include "BRKGA.h"
 
 int main(int argc, char* argv[]) {
     std::string filepath = (argc > 1) ? argv[1] : "data/A-n32-k5.vrp";
@@ -76,6 +77,30 @@ int main(int argc, char* argv[]) {
         Solution solucaoGA = GeneticAlgorithm(instance, numGeracoes, tamanhoPopulacao,
                                                tamanhoTorneio, elitismo, probMutacao, probCrossover);
         solucaoGA.imprime(instance);
+
+        std::cout << "========BRKGA========" << "\n";
+        int tamanhoPopulacaoBRKGA, numGeracoesBRKGA, numElite;
+        double mutantes, probElite;
+
+        std::cout << "Tamanho da populacao: ";
+        std::cin >> tamanhoPopulacaoBRKGA;
+         
+        std::cout << "Numero de geracoes: ";
+        std::cin >> numGeracoesBRKGA;
+         
+        std::cout << "Elitismo (num. individuos): ";
+        std::cin >> numElite;
+         
+        std::cout << "Quantidade de mutantes %: ";
+        std::cin >> mutantes;
+         
+        std::cout << "Probabilidade de selecionar elites: ";
+        std::cin >> probElite;
+
+        Solution solucaoBRKGA = BRKGA(instance, numGeracoesBRKGA, tamanhoPopulacaoBRKGA,
+                                               numElite, mutantes, probElite);
+
+        solucaoBRKGA.imprime(instance);
     }
     catch (const std::exception& e) {
         std::cerr << "Erro: " << e.what() << "\n";
