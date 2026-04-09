@@ -1,5 +1,6 @@
 #pragma once
-#include "VRPInstance.h"
-#include "Solution.h"
+
+#include "core/VRPInstance.h"
+#include "core/Solution.h"
 
 Solution nearestN(const VRPInstance& instance);

@@ -4,9 +4,9 @@
 #include <vector>
 #include <climits>
 #include <chrono>
-#include "BRKGA.h"
-#include "relocate.h"
-#include "2opt.h"
+#include "metaheuristicas/BRKGA.h"
+#include "neighborhoods/2opt.h"
+#include "neighborhoods/relocate.h"
 
 struct Cromossomo {
     std::vector<double> keys;

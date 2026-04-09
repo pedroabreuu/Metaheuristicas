@@ -1,7 +1,7 @@
 #include <vector>
 #include <algorithm> 
 #include <limits>
-#include "nearestNeighbor.h"
+#include "utils/nearestNeighbor.h"
 
 Solution nearestN(const VRPInstance& instance) {
   std::vector<bool> visitados(instance.nodes.size(), false);

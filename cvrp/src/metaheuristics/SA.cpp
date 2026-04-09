@@ -2,9 +2,9 @@
 #include <iostream>
 #include <cmath>
 #include <chrono>
-#include "SA.h"
-#include "relocate.h"
-#include "2opt.h"
+#include "metaheuristicas/SA.h"
+#include "neighborhoods/relocate.h"
+#include "neighborhoods/2opt.h"
 
 Solution SimulatedAnnealing(Solution solucao, const VRPInstance& instance, double To, int SAmax, double alpha) {
     auto inicio = std::chrono::steady_clock::now();

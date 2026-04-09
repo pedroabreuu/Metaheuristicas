@@ -1,13 +1,13 @@
 #include <iostream>
 #include <chrono>
-#include "parser.h"
-#include "nearestNeighbor.h"
-#include "CWSavings.h"
-#include "2opt.h"
-#include "relocate.h"
-#include "SA.h"
-#include "ga.h"
-#include "BRKGA.h"
+#include "utils/parser.h"
+#include "utils/nearestNeighbor.h"
+#include "utils/CWSavings.h"
+#include "neighborhoods/2opt.h"
+#include "neighborhoods/relocate.h"
+#include "metaheuristicas/SA.h"
+#include "metaheuristicas/ga.h"
+#include "metaheuristicas/BRKGA.h"
 
 int main(int argc, char* argv[]) {
     std::string filepath = (argc > 1) ? argv[1] : "data/A-n32-k5.vrp";

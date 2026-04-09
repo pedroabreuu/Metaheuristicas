@@ -5,7 +5,7 @@
 #include <cmath>
 #include <stdexcept>
 #include <unordered_map>
-#include "Node.h"
+#include "core/Node.h"
 
 struct VRPInstance {
     int depot_id  = 0;

@@ -1,4 +1,4 @@
-#include "Solution.h" 
+#include "core/Solution.h" 
 #include <iostream>
 
 void Solution::calculaCusto(const VRPInstance& instance) {

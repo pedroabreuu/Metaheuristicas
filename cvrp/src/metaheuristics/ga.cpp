@@ -5,10 +5,10 @@
 #include <climits>
 #include <unordered_set>
 #include <chrono>
-#include "Solution.h"
-#include "ga.h"
-#include "relocate.h"
-#include "2opt.h"
+#include "core/Solution.h"
+#include "metaheuristicas/ga.h"
+#include "neighborhoods/2opt.h"
+#include "neighborhoods/relocate.h"
 
 static Solution gerarSolucaoAleatoria(const VRPInstance& instance, std::mt19937& gen) {
 	std::vector<int> ids;

@@ -1,7 +1,7 @@
 #include <vector>
 #include <algorithm>
 #include <random>
-#include "relocate.h"
+#include "neighborhoods/relocate.h"
 
 Solution relocate(Solution solucao, const VRPInstance& instance) {
   const Node& depot = instance.getDepot();

@@ -9,15 +9,15 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 add_executable(cvrp
     src/main.cpp
-    src/parser.cpp
-    src/Solution.cpp
-    src/nearestNeighbor.cpp
-    src/CWSavings.cpp
-    src/2opt.cpp
-    src/relocate.cpp
-    src/SA.cpp
-    src/ga.cpp
-    src/BRKGA.cpp
+    src/core/Solution.cpp
+    src/utils/parser.cpp
+    src/utils/nearestNeighbor.cpp
+    src/utils/CWSavings.cpp
+    src/neighborhoods/2opt.cpp
+    src/neighborhoods/relocate.cpp
+    src/metaheuristics/SA.cpp
+    src/metaheuristics/ga.cpp
+    src/metaheuristics/BRKGA.cpp
 )
 
 target_include_directories(cvrp PRIVATE include)
