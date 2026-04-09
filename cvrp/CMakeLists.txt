@@ -15,6 +15,7 @@ add_executable(cvrp
     src/utils/CWSavings.cpp
     src/neighborhoods/2opt.cpp
     src/neighborhoods/relocate.cpp
+    src/neighborhoods/swap.cpp
     src/metaheuristicas/SA.cpp
     src/metaheuristicas/ga.cpp
     src/metaheuristicas/BRKGA.cpp

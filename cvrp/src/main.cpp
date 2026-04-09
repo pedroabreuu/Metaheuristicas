@@ -5,6 +5,7 @@
 #include "utils/CWSavings.h"
 #include "neighborhoods/2opt.h"
 #include "neighborhoods/relocate.h"
+#include "neighborhoods/swap.h"
 #include "metaheuristicas/SA.h"
 #include "metaheuristicas/ga.h"
 #include "metaheuristicas/BRKGA.h"
@@ -33,7 +34,12 @@ int main(int argc, char* argv[]) {
         std::cout << "========Clarke-Wright========" << "\n";
         solucaoCW.imprime(instance);
 
-        Solution solucao2opt = opt2(solucaoCW, instance);
+        Solution solucaoSWAP = swapIntra(solucaoCW, instance);
+        solucaoSWAP.calculaCusto(instance);
+        std::cout << "========Swap Intra========" << "\n";
+        solucaoSWAP.imprime(instance);
+
+        Solution solucao2opt = opt2(solucaoSWAP, instance);
         solucao2opt.calculaCusto(instance);
         std::cout << "========2-opt========" << "\n";
         solucao2opt.imprime(instance);
@@ -45,7 +51,7 @@ int main(int argc, char* argv[]) {
 
         auto t1 = std::chrono::steady_clock::now();
         double tempoCW = std::chrono::duration<double>(t1 - t0).count();
-        std::cout << "CW+2opt+Relocate: " << solucaoRelocate.custoTotal << " em " << tempoCW << "s" << std::endl;
+        std::cout << "CW+2opt+Relocate+Swap: " << solucaoRelocate.custoTotal << " em " << tempoCW << "s" << std::endl;
 
         Solution solucaoSA = SimulatedAnnealing(solucaoRelocate, instance, 1000.0, 2000, 0.9995);
         solucaoSA.calculaCusto(instance);
