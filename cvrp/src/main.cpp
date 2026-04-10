@@ -6,9 +6,11 @@
 #include "neighborhoods/2opt.h"
 #include "neighborhoods/relocate.h"
 #include "neighborhoods/swap.h"
+#include "neighborhoods/crossE.h"
 #include "metaheuristicas/SA.h"
 #include "metaheuristicas/ga.h"
 #include "metaheuristicas/BRKGA.h"
+#include "metaheuristicas/vns.h"
 
 int main(int argc, char* argv[]) {
     std::string filepath = (argc > 1) ? argv[1] : "data/A-n32-k5.vrp";
@@ -22,91 +24,101 @@ int main(int argc, char* argv[]) {
         std::cout << "Caminhões:    " << instance.num_trucks  << "\n";
         std::cout << "Otimo conhecido: " << instance.optimal_value << "\n";
 
-        Solution solucaoNN = nearestN(instance);
-        solucaoNN.calculaCusto(instance);
-        std::cout << "========Nearest Neighbor========" << "\n";
-        solucaoNN.imprime(instance);
+        // Solution solucaoNN = nearestN(instance);
+        // solucaoNN.calculaCusto(instance);
+        // std::cout << "========Nearest Neighbor========" << "\n";
+        // solucaoNN.imprime(instance);
 
-        auto t0 = std::chrono::steady_clock::now();
+        // auto t0 = std::chrono::steady_clock::now();
 
         Solution solucaoCW = clarkeWright(instance);
         solucaoCW.calculaCusto(instance);
-        std::cout << "========Clarke-Wright========" << "\n";
-        solucaoCW.imprime(instance);
+        //std::cout << "========Clarke-Wright========" << "\n";
+        //solucaoCW.imprime(instance);
 
-        Solution solucaoSWAP = swapIntra(solucaoCW, instance);
-        solucaoSWAP.calculaCusto(instance);
-        std::cout << "========Swap Intra========" << "\n";
-        solucaoSWAP.imprime(instance);
-
-        Solution solucao2opt = opt2(solucaoSWAP, instance);
+        Solution solucao2opt = opt2(solucaoCW, instance);
         solucao2opt.calculaCusto(instance);
-        std::cout << "========2-opt========" << "\n";
-        solucao2opt.imprime(instance);
+        // std::cout << "========2-opt========" << "\n";
+        // solucao2opt.imprime(instance);
 
         Solution solucaoRelocate = relocate(solucao2opt, instance);
-        solucaoRelocate.calculaCusto(instance);
-        std::cout << "========Relocate========" << "\n";
-        solucaoRelocate.imprime(instance);
+        // solucaoRelocate.calculaCusto(instance);
+        // std::cout << "========Relocate========" << "\n";
+        // solucaoRelocate.imprime(instance);
 
-        auto t1 = std::chrono::steady_clock::now();
-        double tempoCW = std::chrono::duration<double>(t1 - t0).count();
-        std::cout << "CW+2opt+Relocate+Swap: " << solucaoRelocate.custoTotal << " em " << tempoCW << "s" << std::endl;
+        // Solution solucaoSWAP = swapIntra(solucaoRelocate, instance);
+        // solucaoSWAP.calculaCusto(instance);
+        // std::cout << "========Swap Intra========" << "\n";
+        // solucaoSWAP.imprime(instance);
 
-        Solution solucaoSA = SimulatedAnnealing(solucaoRelocate, instance, 1000.0, 2000, 0.9995);
-        solucaoSA.calculaCusto(instance);
-        std::cout << "========Simulated Annealing========" << "\n";
-        solucaoSA.imprime(instance);
+        // Solution solucaoCE = crossExchange(solucaoSWAP, instance);
+        // solucaoCE.calculaCusto(instance);
+        // std::cout << "========Cross-Exchange========" << "\n";
+        // solucaoCE.imprime(instance);
 
-        std::cout << "========Algoritmo Genético========" << "\n";
-        int tamanhoPopulacao, numGeracoes, tamanhoTorneio, elitismo;
-        double probMutacao, probCrossover;
-         
-        std::cout << "Tamanho da populacao: ";
-        std::cin >> tamanhoPopulacao;
-         
-        std::cout << "Numero de geracoes: ";
-        std::cin >> numGeracoes;
-         
-        std::cout << "Tamanho do torneio: ";
-        std::cin >> tamanhoTorneio;
-         
-        std::cout << "Elitismo (num. individuos): ";
-        std::cin >> elitismo;
-         
-        std::cout << "Probabilidade de mutacao (0.0 a 1.0): ";
-        std::cin >> probMutacao;
-         
-        std::cout << "Probabilidade de crossover (0.0 a 1.0): ";
-        std::cin >> probCrossover;
-         
-        Solution solucaoGA = GeneticAlgorithm(instance, numGeracoes, tamanhoPopulacao,
-                                               tamanhoTorneio, elitismo, probMutacao, probCrossover);
-        solucaoGA.imprime(instance);
+        // auto t1 = std::chrono::steady_clock::now();
+        // double tempoCW = std::chrono::duration<double>(t1 - t0).count();
+        // std::cout << "CW+2opt+Relocate+Swap+CrossExchange: "
+        //           << solucaoCE.custoTotal << " em " << tempoCW << "s" << std::endl;
 
-        std::cout << "========BRKGA========" << "\n";
-        int tamanhoPopulacaoBRKGA, numGeracoesBRKGA, numElite;
-        double mutantes, probElite;
+        // Solution solucaoSA = SimulatedAnnealing(solucaoCW, instance, 1000.0, 2000, 0.9995);
+        // solucaoSA.calculaCusto(instance);
+        // std::cout << "========Simulated Annealing========" << "\n";
+        // solucaoSA.imprime(instance);
 
-        std::cout << "Tamanho da populacao: ";
-        std::cin >> tamanhoPopulacaoBRKGA;
+        // std::cout << "========Algoritmo Genético========" << "\n";
+        // int tamanhoPopulacao, numGeracoes, tamanhoTorneio, elitismo;
+        // double probMutacao, probCrossover;
          
-        std::cout << "Numero de geracoes: ";
-        std::cin >> numGeracoesBRKGA;
+        // std::cout << "Tamanho da populacao: ";
+        // std::cin >> tamanhoPopulacao;
          
-        std::cout << "Elitismo (num. individuos): ";
-        std::cin >> numElite;
+        // std::cout << "Numero de geracoes: ";
+        // std::cin >> numGeracoes;
          
-        std::cout << "Quantidade de mutantes %: ";
-        std::cin >> mutantes;
+        // std::cout << "Tamanho do torneio: ";
+        // std::cin >> tamanhoTorneio;
          
-        std::cout << "Probabilidade de selecionar elites: ";
-        std::cin >> probElite;
+        // std::cout << "Elitismo (num. individuos): ";
+        // std::cin >> elitismo;
+         
+        // std::cout << "Probabilidade de mutacao (0.0 a 1.0): ";
+        // std::cin >> probMutacao;
+         
+        // std::cout << "Probabilidade de crossover (0.0 a 1.0): ";
+        // std::cin >> probCrossover;
+         
+        // Solution solucaoGA = GeneticAlgorithm(instance, numGeracoes, tamanhoPopulacao,
+        //                                        tamanhoTorneio, elitismo, probMutacao, probCrossover);
+        // solucaoGA.imprime(instance);
 
-        Solution solucaoBRKGA = BRKGA(instance, numGeracoesBRKGA, tamanhoPopulacaoBRKGA,
-                                               numElite, mutantes, probElite);
+        // std::cout << "========BRKGA========" << "\n";
+        // int tamanhoPopulacaoBRKGA, numGeracoesBRKGA, numElite;
+        // double mutantes, probElite;
 
-        solucaoBRKGA.imprime(instance);
+        // std::cout << "Tamanho da populacao: ";
+        // std::cin >> tamanhoPopulacaoBRKGA;
+         
+        // std::cout << "Numero de geracoes: ";
+        // std::cin >> numGeracoesBRKGA;
+         
+        // std::cout << "Elitismo (num. individuos): ";
+        // std::cin >> numElite;
+         
+        // std::cout << "Quantidade de mutantes %: ";
+        // std::cin >> mutantes;
+         
+        // std::cout << "Probabilidade de selecionar elites: ";
+        // std::cin >> probElite;
+
+        // Solution solucaoBRKGA = BRKGA(instance, numGeracoesBRKGA, tamanhoPopulacaoBRKGA,
+        //                                        numElite, mutantes, probElite);
+
+        // solucaoBRKGA.imprime(instance);
+
+        std::cout << "========VNS========" << "\n";
+        Solution solucaoVNS = VNS(solucaoRelocate, instance, 10, 600.0, 200.0, 0.9995, 100);
+        solucaoVNS.imprime(instance);
     }
     catch (const std::exception& e) {
         std::cerr << "Erro: " << e.what() << "\n";

@@ -20,8 +20,12 @@ Solution opt2(Solution solucao, const VRPInstance& instance) {
         while (melhorou) {
             melhorou = false;
 
-            for (size_t j = 0; j + 1 < solucao.rotas[i].size() && !melhorou; j++) {
-                for (size_t k = j + 1; k < solucao.rotas[i].size() && !melhorou; k++) {
+            double bestDelta = 0.0;
+            int bestJ = -1;
+            int bestK = -1;
+
+            for (size_t j = 0; j + 1 < solucao.rotas[i].size(); j++) {
+                for (size_t k = j + 1; k < solucao.rotas[i].size(); k++) {
                     const Node& noA = (j == 0) ? depot : nodeById(solucao.rotas[i][j - 1]);
                     const Node& noB = nodeById(solucao.rotas[i][j]);
                     const Node& noC = nodeById(solucao.rotas[i][k]);
@@ -34,11 +38,19 @@ Solution opt2(Solution solucao, const VRPInstance& instance) {
                     const double depois =
                         instance.distancia(noA, noC) + instance.distancia(noB, noD);
 
-                    if (depois < antes) {
-                        std::reverse(solucao.rotas[i].begin() + j, solucao.rotas[i].begin() + k + 1);
-                        melhorou = true;
+                    const double delta = depois - antes;
+
+                    if (delta < bestDelta) {
+                        bestDelta = delta;
+                        bestJ = static_cast<int>(j);
+                        bestK = static_cast<int>(k);
                     }
                 }
+            }
+
+            if (bestJ != -1) {
+                std::reverse(solucao.rotas[i].begin() + bestJ, solucao.rotas[i].begin() + bestK + 1);
+                melhorou = true;
             }
         }
     }

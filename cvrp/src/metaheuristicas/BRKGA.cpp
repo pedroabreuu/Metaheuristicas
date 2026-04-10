@@ -7,6 +7,8 @@
 #include "metaheuristicas/BRKGA.h"
 #include "neighborhoods/2opt.h"
 #include "neighborhoods/relocate.h"
+#include "neighborhoods/swap.h"
+#include "neighborhoods/crossE.h"
 
 struct Cromossomo {
     std::vector<double> keys;
@@ -100,16 +102,16 @@ static void decodificaEAvalia(Cromossomo& c, const VRPInstance& instance) {
     c.solution = decoder(c, instance);
 
     limpaRotasVazias(c.solution);
-    c.solution = relocate(c.solution, instance);
-
-    limpaRotasVazias(c.solution);
     c.solution = opt2(c.solution, instance);
 
     limpaRotasVazias(c.solution);
-    c.solution = relocate(c.solution, instance);
+    c.solution = relocate(c.solution, instance);    
 
     limpaRotasVazias(c.solution);
-    c.solution = opt2(c.solution, instance);
+    c.solution = swapIntra(c.solution, instance);
+
+    limpaRotasVazias(c.solution);
+    c.solution = crossExchange(c.solution, instance);
 
     limpaRotasVazias(c.solution);
     c.solution.calculaCusto(instance);

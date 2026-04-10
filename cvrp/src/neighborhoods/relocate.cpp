@@ -23,14 +23,16 @@ Solution relocate(Solution solucao, const VRPInstance& instance) {
   while (melhorou) {
     melhorou = false;
 
-    for (size_t i = 0; i < solucao.rotas.size() && !melhorou; i++) {
-      if (solucao.rotas[i].empty()) continue; // ADICIONADO
+    double melhorMelhoria = 0.0;
+    int melhorRotaOrigem = -1;
+    int melhorClienteIdx = -1;
+    int melhorRotaDestino = -1;
+    int melhorPosInsercao = -1;
 
-      for (size_t j = 0; j < solucao.rotas[i].size() && !melhorou; j++) {
-        double melhorMelhoria = 0.0;
-        int melhorRotaDestino = -1;
-        int melhorPosInsercao = -1;
+    for (size_t i = 0; i < solucao.rotas.size(); i++) {
+      if (solucao.rotas[i].empty()) continue;
 
+      for (size_t j = 0; j < solucao.rotas[i].size(); j++) {
         const int clienteId = solucao.rotas[i][j];
         const Node& clienteNode = nodeById(clienteId);
         const int demandaCliente = clienteNode.demanda;
@@ -67,29 +69,35 @@ Solution relocate(Solution solucao, const VRPInstance& instance) {
 
             if (melhoria > melhorMelhoria) {
               melhorMelhoria = melhoria;
+              melhorRotaOrigem = static_cast<int>(i);
+              melhorClienteIdx = static_cast<int>(j);
               melhorRotaDestino = static_cast<int>(k);
               melhorPosInsercao = static_cast<int>(l);
             }
           }
         }
-
-        if (melhorRotaDestino != -1) {
-          solucao.rotas[i].erase(solucao.rotas[i].begin() + j);
-          solucao.rotas[melhorRotaDestino].insert(
-              solucao.rotas[melhorRotaDestino].begin() + melhorPosInsercao, clienteId);
-
-          cargaRotas[i] -= demandaCliente;
-          cargaRotas[melhorRotaDestino] += demandaCliente;
-
-          if (solucao.rotas[i].empty()) {
-            solucao.rotas.erase(solucao.rotas.begin() + i);
-            cargaRotas.erase(cargaRotas.begin() + i);
-          }
-
-          melhorou = true;
-        }
       }
     }
+
+    if (melhorRotaOrigem != -1) {
+      int clienteId = solucao.rotas[melhorRotaOrigem][melhorClienteIdx];
+      int demandaCliente = nodeById(clienteId).demanda;
+
+      solucao.rotas[melhorRotaOrigem].erase(solucao.rotas[melhorRotaOrigem].begin() + melhorClienteIdx);
+      cargaRotas[melhorRotaOrigem] -= demandaCliente;
+
+      solucao.rotas[melhorRotaDestino].insert(
+          solucao.rotas[melhorRotaDestino].begin() + melhorPosInsercao, clienteId);
+      cargaRotas[melhorRotaDestino] += demandaCliente;
+
+      if (solucao.rotas[melhorRotaOrigem].empty()) {
+        solucao.rotas.erase(solucao.rotas.begin() + melhorRotaOrigem);
+        cargaRotas.erase(cargaRotas.begin() + melhorRotaOrigem);
+      }
+
+      melhorou = true;
+    }
+    
   }
 
   return solucao;

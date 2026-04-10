@@ -9,6 +9,8 @@
 #include "metaheuristicas/ga.h"
 #include "neighborhoods/2opt.h"
 #include "neighborhoods/relocate.h"
+#include "neighborhoods/swap.h"
+#include "neighborhoods/crossE.h"
 
 static Solution gerarSolucaoAleatoria(const VRPInstance& instance, std::mt19937& gen) {
 	std::vector<int> ids;
@@ -187,7 +189,9 @@ Solution GeneticAlgorithm(const VRPInstance& instance, int numGeracoes, int tama
 		    } else {
 		        filho = solucoes[idx1];
 		        //limpaRotasVazias(filho);
-		        filho = opt2(filho, instance);
+		        filho = swapIntra(filho, instance);
+		        // filho = opt2(filho, instance);
+		        filho = crossExchange(filho, instance);
 		    }
 
 		    if (probDist(gen) < probMutacao) {
@@ -195,20 +199,26 @@ Solution GeneticAlgorithm(const VRPInstance& instance, int numGeracoes, int tama
 		            filho = randomOpt2(filho, instance);
 	    	}
 
-	    	if (probDist(gen) < 0.3) {
+	    	if (probDist(gen) < 0.2) {
+
+	    		limpaRotasVazias(filho);
+				filho = crossExchange(filho, instance);
+
+				limpaRotasVazias(filho);
+		    	filho = swapIntra(filho, instance);
+
+		    	limpaRotasVazias(filho);	
+		    	filho = opt2(filho, instance);
+
 	    		limpaRotasVazias(filho);
 				filho = relocate(filho, instance);
 
 				limpaRotasVazias(filho);
-		    	filho = opt2(filho, instance);
+		    	filho = swapIntra(filho, instance);
 
 		    	limpaRotasVazias(filho);
-				filho = relocate(filho, instance);
-		    	
-				limpaRotasVazias(filho);
-		    	filho = opt2(filho, instance);
+				filho = crossExchange(filho, instance);
 	    	}
-
 
 			limpaRotasVazias(filho);
 	    	filho.calculaCusto(instance);
@@ -229,7 +239,7 @@ Solution GeneticAlgorithm(const VRPInstance& instance, int numGeracoes, int tama
 
         if (instance.optimal_value > 0 && melhorSolucao.custoTotal == instance.optimal_value) break;
 
-        if ((i + 1) % 100 == 0 || i == numGeracoes - 1) {
+        if ((i + 1) % 1 == 0 || i == numGeracoes - 1) {
             std::cout << "Geracao " << i + 1 
                       << " | Melhor geracao: " << melhorAtual->custoTotal 
                       << " | Melhor global: " << melhorSolucao.custoTotal << std::endl;

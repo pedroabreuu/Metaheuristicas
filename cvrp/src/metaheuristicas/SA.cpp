@@ -5,6 +5,8 @@
 #include "metaheuristicas/SA.h"
 #include "neighborhoods/relocate.h"
 #include "neighborhoods/2opt.h"
+#include "neighborhoods/swap.h"
+#include "neighborhoods/crossE.h"
 
 Solution SimulatedAnnealing(Solution solucao, const VRPInstance& instance, double To, int SAmax, double alpha) {
     auto inicio = std::chrono::steady_clock::now();
@@ -59,11 +61,14 @@ Solution SimulatedAnnealing(Solution solucao, const VRPInstance& instance, doubl
         }
         Temp *= alpha;
         //std::cout << "Temp=" << Temp << " best=" << best.custoTotal << std::endl;
-        //std::cout << "Temp=" << Temp << " corrente=" << corrente.custoTotal << " best=" << best.custoTotal << std::endl;
+        std::cout << "Temp=" << Temp << " corrente=" << corrente.custoTotal << " best=" << best.custoTotal << std::endl;
     }
 
     best = opt2(best, instance);
     best = relocate(best, instance);
+    best = swapIntra(best, instance);
+    best = crossExchange(best, instance);
+    best = crossExchange(best, instance);
     best.calculaCusto(instance);
 
     auto fim = std::chrono::steady_clock::now();
