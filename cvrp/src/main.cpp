@@ -117,7 +117,7 @@ int main(int argc, char* argv[]) {
         // solucaoBRKGA.imprime(instance);
 
         std::cout << "========VNS========" << "\n";
-        Solution solucaoVNS = VNS(solucaoRelocate, instance, 10, 600.0, 200.0, 0.9995, 100);
+        Solution solucaoVNS = VNS(solucaoRelocate, instance, 7, 600.0, 200.0, 0.9995, 100);
         solucaoVNS.imprime(instance);
     }
     catch (const std::exception& e) {

@@ -21,7 +21,7 @@ static void limpaRotasVazias(Solution& solucao) {
 
 Solution VND(Solution solucao, const VRPInstance& instance) {
     limpaRotasVazias(solucao);
-    std::vector<NeighborhoodFunc> vizinhancas = {relocate, swapIntra, opt2, crossExchange};
+    std::vector<NeighborhoodFunc> vizinhancas = {opt2, relocate, swapIntra, crossExchange, swapIntra};
 
     solucao.calculaCusto(instance);
     int k = 0;
