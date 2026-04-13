@@ -4,31 +4,6 @@ Implementações de metaheurísticas aplicadas a problemas de otimização combi
 
 ---
 
-## Estrutura do repositório
-
-```
-Metaheuristicas/
-└── cvrp/                  ← Problema
-    ├── CMakeLists.txt     ← Configurações build
-    ├── include/           ← Headers
-    │   ├── Node.h         
-    │   ├── VRPInstance.h
-    │   └── parser.h
-    ├── src/
-    │   ├── main.cpp
-    │   └── parser.cpp     ← Parser das instâncias
-    ├── data/              ← Instâncias de teste (.vrp)
-    └── results/           ← Saídas
-```
-
----
-
-## Problemas implementados
-
-- [CVRP](cvrp/) — Capacitated Vehicle Routing Problem
-
----
-
 ## Como compilar
 
 A partir da raiz do projeto (`cvrp/`), configure o build uma única vez:
