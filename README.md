@@ -34,13 +34,13 @@ Metaheuristicas/
 A partir da raiz do projeto (`cvrp/`), configure o build uma única vez:
 
 ```bash
-cmake -S . -B build
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 ```
 
 Em seguida, compile sempre que houver alterações no código:
 
 ```bash
-cmake --build build
+cmake --build build -j
 ```
 
 O binário será gerado em `build/cvrp`.
