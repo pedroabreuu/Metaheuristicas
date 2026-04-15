@@ -74,6 +74,11 @@
 
         std::cout << "VNS inicio | Custo: " << best.custoTotal << std::endl;
 
+        if (best.custoTotal == instance.optimal_value) {
+            std::cout << "VNS: Otimo encontrado em " << std::chrono::duration<double>(tempoBest - inicio).count() << "s" << std::endl;
+            return best;
+        }
+
         while (true) {
             auto agora = std::chrono::steady_clock::now();
             double tempoDecorrido = std::chrono::duration<double>(agora - inicio).count();
