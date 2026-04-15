@@ -42,29 +42,34 @@ int main(int argc, char* argv[]) {
         // solucao2opt.imprime(instance);
 
         Solution solucaoRelocate = relocate(solucao2opt, instance);
-        // solucaoRelocate.calculaCusto(instance);
-        // std::cout << "========Relocate========" << "\n";
-        // solucaoRelocate.imprime(instance);
+        solucaoRelocate.calculaCusto(instance);
+        std::cout << "========Relocate========" << "\n";
+        solucaoRelocate.imprime(instance);
 
-        // Solution solucaoSWAP = swapIntra(solucaoRelocate, instance);
-        // solucaoSWAP.calculaCusto(instance);
-        // std::cout << "========Swap Intra========" << "\n";
-        // solucaoSWAP.imprime(instance);
+        Solution solucaoSWAP = swapIntra(solucaoRelocate, instance);
+        solucaoSWAP.calculaCusto(instance);
+        std::cout << "========Swap Intra========" << "\n";
+        solucaoSWAP.imprime(instance);
 
-        // Solution solucaoCE = crossExchange(solucaoSWAP, instance);
-        // solucaoCE.calculaCusto(instance);
-        // std::cout << "========Cross-Exchange========" << "\n";
-        // solucaoCE.imprime(instance);
+        Solution solucaoCE = crossExchange(solucaoSWAP, instance);
+        solucaoCE.calculaCusto(instance);
+        std::cout << "========Cross-Exchange========" << "\n";
+        solucaoCE.imprime(instance);
+
+        solucaoSWAP = swapIntra(solucaoCE, instance);
+        solucaoSWAP.calculaCusto(instance);
+        std::cout << "========Swap Intra 2========" << "\n";
+        solucaoSWAP.imprime(instance);
 
         // auto t1 = std::chrono::steady_clock::now();
         // double tempoCW = std::chrono::duration<double>(t1 - t0).count();
         // std::cout << "CW+2opt+Relocate+Swap+CrossExchange: "
         //           << solucaoCE.custoTotal << " em " << tempoCW << "s" << std::endl;
 
-        // Solution solucaoSA = SimulatedAnnealing(solucaoCW, instance, 1000.0, 2000, 0.9995);
-        // solucaoSA.calculaCusto(instance);
-        // std::cout << "========Simulated Annealing========" << "\n";
-        // solucaoSA.imprime(instance);
+        Solution solucaoSA = SimulatedAnnealing(solucaoCW, instance, 1000.0, 2000, 0.995);
+        solucaoSA.calculaCusto(instance);
+        std::cout << "========Simulated Annealing========" << "\n";
+        solucaoSA.imprime(instance);
 
         // std::cout << "========Algoritmo Genético========" << "\n";
         // int tamanhoPopulacao, numGeracoes, tamanhoTorneio, elitismo;
@@ -116,9 +121,9 @@ int main(int argc, char* argv[]) {
 
         // solucaoBRKGA.imprime(instance);
 
-        std::cout << "========VNS========" << "\n";
-        Solution solucaoVNS = VNS(solucaoRelocate, instance, 7, 600.0, 200.0, 0.9995, 100);
-        solucaoVNS.imprime(instance);
+        // std::cout << "========VNS========" << "\n";
+        // Solution solucaoVNS = VNS(solucaoSWAP, instance, 7, 600.0, 200.0, 0.9995, 100);
+        // solucaoVNS.imprime(instance);
     }
     catch (const std::exception& e) {
         std::cerr << "Erro: " << e.what() << "\n";
