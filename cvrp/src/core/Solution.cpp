@@ -2,28 +2,34 @@
 #include <iostream>
 
 void Solution::calculaCusto(const VRPInstance& instance) {
-  custoTotal = 0;
-  int penalidade = 0;
-  const Node& depot = instance.getDepot();
+    custoTotal = 0;
+    const Node& depot = instance.getDepot();
 
-  for (const auto& rota: rotas) {
-    int demandaTotal = 0;
-    // comeca no depot
-    const Node* anterior = &depot;
-    for (int id: rota) { // para cada node encontrado, acumula a distancia
-          const Node& node = instance.getNode(id);
-          demandaTotal += node.demanda;
-          custoTotal += instance.distancia(*anterior, node);
-          anterior = &node;
-      }
-    if (demandaTotal > instance.capacity) {
-      custoTotal += 1000000 * (demandaTotal - instance.capacity);
+    for (const auto& rota : rotas) {
+        int demandaTotal = 0;
+        const Node* anterior = &depot;
+        for (int id : rota) {
+            const Node& node = instance.getNode(id);
+            demandaTotal += node.demanda;
+            custoTotal += instance.distancia(*anterior, node);
+            anterior = &node;
+        }
+        custoTotal += instance.distancia(*anterior, depot);
+
+        if (demandaTotal > instance.capacity) {
+            custoTotal += 1000000 * (demandaTotal - instance.capacity);
+        }
     }
-    // voltando pro deposito
-    custoTotal += instance.distancia(*anterior, depot);
-  }
+
+    if (instance.num_trucks > 0 && 
+        static_cast<int>(rotas.size()) > instance.num_trucks) {
+        custoTotal += 1000000 * (rotas.size() - instance.num_trucks);
+    }
 }
 
+int Solution::getCusto() const {
+    return custoTotal;
+}
 
 void Solution::imprime(const VRPInstance& instance) const {
   int depot = instance.depot_id;
