@@ -212,13 +212,11 @@ static Solution RVND(Solution solucao, const VRPInstance& instance, std::mt19937
 
         if (candidata.custoTotal < solucao.custoTotal) {
             solucao = candidata;
-            // reinicia vizinhancas
             indices.clear();
             for (size_t i = 0; i < vizinhancas.size(); i++) {
                 indices.push_back(static_cast<int>(i));
             }
         } else {
-            // remove vizinhanca que nao melhorou
             indices.erase(indices.begin() + pos);
         }
     }
@@ -226,18 +224,18 @@ static Solution RVND(Solution solucao, const VRPInstance& instance, std::mt19937
     return solucao;
 }
 
-static Solution aplicarPerturbacao(const Solution& solucao, const VRPInstance& instance, 
+static Solution aplicarPerturbacao(const Solution& solucao, const VRPInstance& instance,
                                     int intensidade, std::mt19937& gen) {
     Solution perturbada = solucao;
     std::vector<NeighborhoodFunc> perturbacoes = {randomRelocate, randomOpt2, randomCrossExchange};
     std::uniform_int_distribution<int> distTipo(0, static_cast<int>(perturbacoes.size()) - 1);
-    
+
     for (int i = 0; i < intensidade; i++) {
         int tipo = distTipo(gen);
         perturbada = perturbacoes[tipo](perturbada, instance);
         limpaRotasVazias(perturbada);
     }
-    
+
     perturbada.calculaCusto(instance);
     return perturbada;
 }
@@ -246,21 +244,18 @@ Solution GRASP(const VRPInstance& instance, double tempoLimiteSegundos) {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<double> distReal(0.0, 1.0);
-    
-    // alphas
+
     const double ALPHA_MIN = 0.05;
     const double ALPHA_MAX = 0.30;
     const double ALPHA_PERTURBADO = 0.50;
     std::uniform_real_distribution<double> distAlpha(ALPHA_MIN, ALPHA_MAX);
-    
-    // estagacao e perturbacao
+
     int iteracoesSemMelhora = 0;
     const int LIMITE_ESTAGNACAO = 100;
     const int INTENSIDADE_INICIAL = 2;
     const int INTENSIDADE_MAX = 5;
     int intensidadePerturbacao = INTENSIDADE_INICIAL;
 
-    // params de SA
     const double SA_TEMP_INICIAL = 100.0;
     const double SA_ALPHA = 0.9995;
     const double SA_TEMP_MIN = 0.01;
@@ -283,19 +278,29 @@ Solution GRASP(const VRPInstance& instance, double tempoLimiteSegundos) {
 
         Solution s;
         double alpha;
-        
+
         if (iteracoesSemMelhora >= LIMITE_ESTAGNACAO && !primeira) {
-            s = aplicarPerturbacao(best, instance, intensidadePerturbacao, gen);
-            s = RVND(s, instance, gen);
-            s.calculaCusto(instance);
-            
+            // NOVO: agora a perturbacao parte de "atual" em vez de "best".
+            Solution sPerturbada = aplicarPerturbacao(atual, instance, intensidadePerturbacao, gen);
+            sPerturbada = RVND(sPerturbada, instance, gen);
+            sPerturbada.calculaCusto(instance);
+
+            // NOVO: agora o ALPHA_PERTURBADO realmente e usado numa reconstrucao GRASP apos estagnacao.
+            Solution sReconstruida = constroiGreedyRandomized(instance, ALPHA_PERTURBADO, gen);
+            sReconstruida = RVND(sReconstruida, instance, gen);
+            sReconstruida.calculaCusto(instance);
+
+            // NOVO: escolhe a melhor entre a solucao perturbada e a reconstruida.
+            s = (sReconstruida.getCusto() < sPerturbada.getCusto()) ? sReconstruida : sPerturbada;
+
             alpha = ALPHA_PERTURBADO;
             intensidadePerturbacao = std::min(intensidadePerturbacao + 1, INTENSIDADE_MAX);
             iteracoesSemMelhora = 0;
-            
+
             temperatura = SA_TEMP_INICIAL;
-            
-            std::cout << "GRASP perturbacao (intensidade=" << intensidadePerturbacao - 1 
+
+            std::cout << "GRASP perturbacao/reconstrucao (intensidade=" << intensidadePerturbacao - 1
+                      << ", alpha=" << alpha
                       << ") | Custo: " << s.getCusto() << std::endl;
         } else {
             alpha = distAlpha(gen);
@@ -330,9 +335,8 @@ Solution GRASP(const VRPInstance& instance, double tempoLimiteSegundos) {
                 return best;
             }
         } else {
-            // aceita piora com probabilidade
             double delta = s.getCusto() - atual.getCusto();
-            
+
             if (delta < 0) {
                 atual = s;
                 iteracoesSemMelhora = 0;

@@ -25,17 +25,17 @@ int main(int argc, char* argv[]) {
         std::cout << "Caminhões:    " << instance.num_trucks  << "\n";
         std::cout << "Otimo conhecido: " << instance.optimal_value << "\n";
 
+        auto t0 = std::chrono::steady_clock::now();
+
         // Solution solucaoNN = nearestN(instance);
         // solucaoNN.calculaCusto(instance);
         // std::cout << "========Nearest Neighbor========" << "\n";
         // solucaoNN.imprime(instance);
 
-        // auto t0 = std::chrono::steady_clock::now();
-
-        // Solution solucaoCW = clarkeWright(instance);
-        // solucaoCW.calculaCusto(instance);
-        // //std::cout << "========Clarke-Wright========" << "\n";
-        // //solucaoCW.imprime(instance);
+        Solution solucaoCW = clarkeWright(instance);
+        solucaoCW.calculaCusto(instance);
+        // std::cout << "========Clarke-Wright========" << "\n";
+        // solucaoCW.imprime(instance);
 
         // Solution solucao2opt = opt2(solucaoCW, instance);
         // solucao2opt.calculaCusto(instance);
@@ -67,7 +67,7 @@ int main(int argc, char* argv[]) {
         // std::cout << "CW+2opt+Relocate+Swap+CrossExchange: "
         //           << solucaoSWAP.custoTotal << " em " << tempoCW << "s" << std::endl;
 
-        // Solution solucaoSA = SimulatedAnnealing(solucaoCW, instance, 1000.0, 2000, 0.995);
+        // Solution solucaoSA = SimulatedAnnealing(solucaoCW, instance, 1000.0, 2000, 0.9995);
         // solucaoSA.calculaCusto(instance);
         // std::cout << "========Simulated Annealing========" << "\n";
         // solucaoSA.imprime(instance);
@@ -98,7 +98,7 @@ int main(int argc, char* argv[]) {
         //                                        3, 2, 0.2, 0.75);
         // solucaoGA.imprime(instance);
 
-        // std::cout << "========BRKGA========" << "\n";
+        std::cout << "========BRKGA========" << "\n";
         // int tamanhoPopulacaoBRKGA, numGeracoesBRKGA, numElite;
         // double mutantes, probElite;
 
@@ -117,18 +117,18 @@ int main(int argc, char* argv[]) {
         // std::cout << "Probabilidade de selecionar elites: ";
         // std::cin >> probElite;
 
-        // Solution solucaoBRKGA = BRKGA(instance, numGeracoesBRKGA, tamanhoPopulacaoBRKGA,
-        //                                        numElite, mutantes, probElite);
+        Solution solucaoBRKGA = BRKGA(instance, 4000, 120,
+                                               5, 0.1, 0.7);
 
-        // solucaoBRKGA.imprime(instance);
+        solucaoBRKGA.imprime(instance);
 
         // std::cout << "========VNS========" << "\n";
         // Solution solucaoVNS = VNS(solucaoSWAP, instance, 12, 600.0, 200.0, 0.9995, 200);
         // solucaoVNS.imprime(instance);
 
-        std::cout << "========GRASP========" << "\n";
-        Solution solucaoGRASP = GRASP(instance, 300.0);
-        solucaoGRASP.imprime(instance);
+        // std::cout << "========GRASP========" << "\n";
+        // Solution solucaoGRASP = GRASP(instance, 1800.0);
+        // solucaoGRASP.imprime(instance);
     }
     catch (const std::exception& e) {
         std::cerr << "Erro: " << e.what() << "\n";

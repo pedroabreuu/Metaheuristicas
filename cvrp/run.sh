@@ -109,7 +109,7 @@ for vrp_file in "$SEARCH_DIR"/${GROUP}-*.vrp; do
     fi
 
     echo -e "${GREEN}OK${NC}  custo=${custo}  otimo=${otimo}  gap=${gap}%  tempo=${elapsed}s"
-    echo "${instance},${otimo},${custo},${gap},${elapsed},ok" >> "$LOG_FILE"
+    echo "${instance},${otimo},${custo},${gap},${elapsed}s,ok" >> "$LOG_FILE"
     ok=$((ok + 1))
 done
 
