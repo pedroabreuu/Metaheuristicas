@@ -30,6 +30,7 @@ add_executable(cvrp
     src/metaheuristicas/ga.cpp
     src/metaheuristicas/BRKGA.cpp
     src/metaheuristicas/vns.cpp
+    src/metaheuristicas/ils.cpp
     src/metaheuristicas/grasp.cpp
 )
 

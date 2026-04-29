@@ -192,7 +192,7 @@ static Solution constroiGreedyRandomized(const VRPInstance& instance, double alp
 
 static Solution RVND(Solution solucao, const VRPInstance& instance, std::mt19937& gen) {
     limpaRotasVazias(solucao);
-    std::vector<NeighborhoodFunc> vizinhancas = {opt2, relocate, swapIntra, crossExchange};
+    std::vector<NeighborhoodFunc> vizinhancas = {opt2, relocate, swapIntra, crossExchange, swapInter};
 
     solucao.calculaCusto(instance);
     std::vector<int> indices(vizinhancas.size());
@@ -227,7 +227,7 @@ static Solution RVND(Solution solucao, const VRPInstance& instance, std::mt19937
 static Solution aplicarPerturbacao(const Solution& solucao, const VRPInstance& instance,
                                     int intensidade, std::mt19937& gen) {
     Solution perturbada = solucao;
-    std::vector<NeighborhoodFunc> perturbacoes = {randomRelocate, randomOpt2, randomCrossExchange};
+    std::vector<NeighborhoodFunc> perturbacoes = {randomRelocate, randomOpt2, randomCrossExchange, randomSwapInter, randomSwapIntra};
     std::uniform_int_distribution<int> distTipo(0, static_cast<int>(perturbacoes.size()) - 1);
 
     for (int i = 0; i < intensidade; i++) {
@@ -246,18 +246,18 @@ Solution GRASP(const VRPInstance& instance, double tempoLimiteSegundos) {
     std::uniform_real_distribution<double> distReal(0.0, 1.0);
 
     const double ALPHA_MIN = 0.05;
-    const double ALPHA_MAX = 0.45;
-    const double ALPHA_PERTURBADO = 0.6;
+    const double ALPHA_MAX = 0.35;
+    const double ALPHA_PERTURBADO = 0.5;
     std::uniform_real_distribution<double> distAlpha(ALPHA_MIN, ALPHA_MAX);
 
     int iteracoesSemMelhora = 0;
-    const int LIMITE_ESTAGNACAO = 80;
-    const int INTENSIDADE_INICIAL = 2;
-    const int INTENSIDADE_MAX = 7;
+    const int LIMITE_ESTAGNACAO = 100;
+    const int INTENSIDADE_INICIAL = 1;
+    const int INTENSIDADE_MAX = 10;
     int intensidadePerturbacao = INTENSIDADE_INICIAL;
 
     const double SA_TEMP_INICIAL = 150.0;
-    const double SA_ALPHA = 0.999;
+    const double SA_ALPHA = 0.9995;
     const double SA_TEMP_MIN = 0.01;
     double temperatura = SA_TEMP_INICIAL;
 

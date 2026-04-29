@@ -31,6 +31,8 @@ Solution SimulatedAnnealing(Solution solucao, const VRPInstance& instance, doubl
     double pesoRelocate = 1.0;
     double peso2Opt = 1.0;
     double pesoCross = 1.0;
+    double pesoSwapIntra = 1.0;
+    double pesoSwapInter = 1.0;
 
     int semMelhoraBest = 0;
     int semMelhoraTemp = 0;
@@ -80,6 +82,12 @@ Solution SimulatedAnnealing(Solution solucao, const VRPInstance& instance, doubl
                 melhorou = true;
             }
 
+            Solution s5 = swapInter(s, instance);
+            if (s5.custoTotal < s.custoTotal) {
+                s = s5;
+                melhorou = true;
+            }
+
             passos++;
         }
 
@@ -88,12 +96,14 @@ Solution SimulatedAnnealing(Solution solucao, const VRPInstance& instance, doubl
     };
 
     auto escolheMovimento = [&]() {
-        double somaPesos = pesoRelocate + peso2Opt + pesoCross;
+        double somaPesos = pesoRelocate + peso2Opt + pesoCross + pesoSwapIntra + pesoSwapInter;
         double r = realdist(gen) * somaPesos;
 
         if (r < pesoRelocate) return 0;
         if (r < pesoRelocate + peso2Opt) return 1;
-        return 2;
+        if (r < pesoRelocate + peso2Opt + pesoCross) return 2;
+        if (r < pesoRelocate + peso2Opt + pesoCross + pesoSwapIntra) return 3;
+        return 4;
     };
 
     while (Temp > 0.0001 && !achouOtimo) {
@@ -107,8 +117,12 @@ Solution SimulatedAnnealing(Solution solucao, const VRPInstance& instance, doubl
                 sl = randomRelocate(corrente, instance);
             } else if (movimentoAle == 1) {
                 sl = randomOpt2(corrente, instance);
-            } else {
+            } else if (movimentoAle == 2) {
                 sl = randomCrossExchange(corrente, instance);
+            } else if (movimentoAle == 3) {
+                sl = randomSwapIntra(corrente, instance);
+            } else {
+                sl = randomSwapInter(corrente, instance);
             }
             
             sl.calculaCusto(instance);
@@ -124,7 +138,9 @@ Solution SimulatedAnnealing(Solution solucao, const VRPInstance& instance, doubl
 
                 if (movimentoAle == 0) pesoRelocate += 0.15;
                 else if (movimentoAle == 1) peso2Opt += 0.15;
-                else pesoCross += 0.15;
+                else if (movimentoAle == 2) pesoCross += 0.15;
+                else if (movimentoAle == 3) pesoSwapIntra += 0.15;
+                else pesoSwapInter += 0.15;
 
                 if (corrente.custoTotal < best.custoTotal) {
                     best = corrente;
@@ -142,7 +158,9 @@ Solution SimulatedAnnealing(Solution solucao, const VRPInstance& instance, doubl
 
                     if (movimentoAle == 0) pesoRelocate += 0.35;
                     else if (movimentoAle == 1) peso2Opt += 0.35;
-                    else pesoCross += 0.35;
+                    else if (movimentoAle == 2) pesoCross += 0.35;
+                    else if (movimentoAle == 3) pesoSwapIntra += 0.35;
+                    else pesoSwapInter += 0.35;
 
                     if (instance.optimal_value > 0 && best.custoTotal == instance.optimal_value) {
                         achouOtimo = true;
@@ -159,27 +177,35 @@ Solution SimulatedAnnealing(Solution solucao, const VRPInstance& instance, doubl
                     // recompensa se o movimento ao menos foi aceito
                     if (movimentoAle == 0) pesoRelocate += 0.03;
                     else if (movimentoAle == 1) peso2Opt += 0.03;
-                    else pesoCross += 0.03;
+                    else if (movimentoAle == 2) pesoCross += 0.03;
+                    else if (movimentoAle == 3) pesoSwapIntra += 0.03;
+                    else pesoSwapInter += 0.03;
                 } else {
                     // penaliza se o movimento foi rejeitado
                     if (movimentoAle == 0) pesoRelocate = std::max(0.20, pesoRelocate - 0.02);
                     else if (movimentoAle == 1) peso2Opt = std::max(0.20, peso2Opt - 0.02);
-                    else pesoCross = std::max(0.20, pesoCross - 0.02);
+                    else if (movimentoAle == 2) pesoCross = std::max(0.20, pesoCross - 0.02);
+                    else if (movimentoAle == 3) pesoSwapIntra = std::max(0.20, pesoSwapIntra - 0.02);
+                    else pesoSwapInter = std::max(0.20, pesoSwapInter - 0.02);
 
                     semMelhoraBest++;
                 }
             }
 
             // normalizar para evitar pesos com vlaores altos
-            double somaPesos = pesoRelocate + peso2Opt + pesoCross;
+            double somaPesos = pesoRelocate + peso2Opt + pesoCross + pesoSwapIntra + pesoSwapInter;
             if (somaPesos > 30.0) {
                 pesoRelocate /= somaPesos;
                 peso2Opt /= somaPesos;
                 pesoCross /= somaPesos;
+                pesoSwapIntra /= somaPesos;
+                pesoSwapInter /= somaPesos;
 
-                pesoRelocate *= 3.0;
-                peso2Opt *= 3.0;
-                pesoCross *= 3.0;
+                pesoRelocate *= 5.0;
+                peso2Opt *= 5.0;
+                pesoCross *= 5.0;
+                pesoSwapIntra *= 5.0;
+                pesoSwapInter *= 5.0;
             }
             
             // controle de estagnacao
@@ -210,6 +236,8 @@ Solution SimulatedAnnealing(Solution solucao, const VRPInstance& instance, doubl
             corrente = randomOpt2(corrente, instance);
             corrente = randomRelocate(corrente, instance);
             corrente = randomCrossExchange(corrente, instance);
+            corrente = randomSwapIntra(corrente, instance);
+            corrente = randomSwapInter(corrente, instance);
         }
 
         Temp *= alpha;
@@ -234,6 +262,9 @@ Solution SimulatedAnnealing(Solution solucao, const VRPInstance& instance, doubl
 
         Solution s5 = swapIntra(best, instance);
         if (s5.custoTotal < best.custoTotal) { best = s5; melhorou = true; continue; }
+
+        Solution s6 = swapInter(best, instance);
+        if (s6.custoTotal < best.custoTotal) { best = s6; melhorou = true; continue; }
     }
 
     auto fim = std::chrono::steady_clock::now();

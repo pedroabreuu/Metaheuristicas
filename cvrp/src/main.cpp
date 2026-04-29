@@ -12,6 +12,7 @@
 #include "metaheuristicas/BRKGA.h"
 #include "metaheuristicas/vns.h"
 #include "metaheuristicas/grasp.h"
+#include "metaheuristicas/ils.h"
 
 int main(int argc, char* argv[]) {
     std::string filepath = (argc > 1) ? argv[1] : "data/A-n32-k5.vrp";
@@ -32,33 +33,33 @@ int main(int argc, char* argv[]) {
         // std::cout << "========Nearest Neighbor========" << "\n";
         // solucaoNN.imprime(instance);
 
-        Solution solucaoCW = clarkeWright(instance);
-        solucaoCW.calculaCusto(instance);
-        // std::cout << "========Clarke-Wright========" << "\n";
-        // solucaoCW.imprime(instance);
+        // Solution solucaoCW = clarkeWright(instance);
+        // solucaoCW.calculaCusto(instance);
+        // // std::cout << "========Clarke-Wright========" << "\n";
+        // // solucaoCW.imprime(instance);
 
-        Solution solucao2opt = opt2(solucaoCW, instance);
-        solucao2opt.calculaCusto(instance);
-        // std::cout << "========2-opt========" << "\n";
-        // solucao2opt.imprime(instance);
+        // Solution solucao2opt = opt2(solucaoCW, instance);
+        // solucao2opt.calculaCusto(instance);
+        // // std::cout << "========2-opt========" << "\n";
+        // // solucao2opt.imprime(instance);
 
-        Solution solucaoRelocate = relocate(solucao2opt, instance);
-        solucaoRelocate.calculaCusto(instance);
-        // std::cout << "========Relocate========" << "\n";
-        // solucaoRelocate.imprime(instance);
+        // Solution solucaoRelocate = relocate(solucao2opt, instance);
+        // solucaoRelocate.calculaCusto(instance);
+        // // std::cout << "========Relocate========" << "\n";
+        // // solucaoRelocate.imprime(instance);
 
-        Solution solucaoSWAP = swapIntra(solucaoRelocate, instance);
-        solucaoSWAP.calculaCusto(instance);
-        // std::cout << "========Swap Intra========" << "\n";
-        // solucaoSWAP.imprime(instance);
+        // Solution solucaoSWAP = swapIntra(solucaoRelocate, instance);
+        // solucaoSWAP.calculaCusto(instance);
+        // // std::cout << "========Swap Intra========" << "\n";
+        // // solucaoSWAP.imprime(instance);
 
-        Solution solucaoCE = crossExchange(solucaoSWAP, instance);
-        solucaoCE.calculaCusto(instance);
-        // std::cout << "========Cross-Exchange========" << "\n";
-        // solucaoCE.imprime(instance);
+        // Solution solucaoCE = crossExchange(solucaoSWAP, instance);
+        // solucaoCE.calculaCusto(instance);
+        // // std::cout << "========Cross-Exchange========" << "\n";
+        // // solucaoCE.imprime(instance);
 
-        solucaoSWAP = swapIntra(solucaoCE, instance);
-        solucaoSWAP.calculaCusto(instance);
+        // solucaoSWAP = swapIntra(solucaoCE, instance);
+        // solucaoSWAP.calculaCusto(instance);
         // std::cout << "========Swap Intra 2========" << "\n";
         // solucaoSWAP.imprime(instance);
 
@@ -122,13 +123,17 @@ int main(int argc, char* argv[]) {
 
         // solucaoBRKGA.imprime(instance);
 
-        std::cout << "========VNS========" << "\n";
-        Solution solucaoVNS = VNS(solucaoSWAP, instance, 15, 1800.0, 200.0, 0.9995, 200);
-        solucaoVNS.imprime(instance);
+        // std::cout << "========VNS========" << "\n";
+        // Solution solucaoVNS = VNS(solucaoSWAP, instance, 18, 1800.0, 200.0, 0.999, 200);
+        // solucaoVNS.imprime(instance);
 
         // std::cout << "========GRASP========" << "\n";
         // Solution solucaoGRASP = GRASP(instance, 900.0);
         // solucaoGRASP.imprime(instance);
+
+        std::cout << "========ILS========" << "\n";
+        Solution solucaoVNS = ILS(instance, 1800.0, 100.0, 0.9995, 150, 1, 3, 5);
+        solucaoVNS.imprime(instance);
     }
     catch (const std::exception& e) {
         std::cerr << "Erro: " << e.what() << "\n";

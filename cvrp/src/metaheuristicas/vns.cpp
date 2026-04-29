@@ -21,7 +21,7 @@ static void limpaRotasVazias(Solution& solucao) {
 
 Solution VND(Solution solucao, const VRPInstance& instance) {
     limpaRotasVazias(solucao);
-    std::vector<NeighborhoodFunc> vizinhancas = {opt2, relocate, swapIntra, crossExchange, swapIntra, opt2, relocate, swapIntra};
+    std::vector<NeighborhoodFunc> vizinhancas = {opt2, relocate, swapIntra, swapInter, crossExchange, swapIntra};
 
     solucao.calculaCusto(instance);
     int k = 0;
@@ -44,7 +44,13 @@ Solution VND(Solution solucao, const VRPInstance& instance) {
 }
 
 Solution perturbar(Solution solucao, const VRPInstance& instance, int k) {
-    std::vector<NeighborhoodFunc> perturbacoes = {randomRelocate, randomOpt2, randomCrossExchange};
+    std::vector<NeighborhoodFunc> perturbacoes = {
+        randomRelocate,
+        randomOpt2,
+        randomCrossExchange,
+        randomSwapInter,
+        randomSwapIntra
+    };
     static std::mt19937 gen(std::random_device{}());
     std::uniform_int_distribution<> perturbacao(0, perturbacoes.size() - 1);
 
@@ -118,7 +124,7 @@ Solution VNS(Solution solucao, const VRPInstance& instance, int kMax, double tem
         temperatura *= alpha;
 
         if (iterSemMelhora >= iterSemMelhoraMax) {
-            if (dist(gen) < 0.5) {
+            if (dist(gen) < 0.3) {
                 solucao = best;
             } else {
                 solucao = perturbar(best, instance, kMax * 2);

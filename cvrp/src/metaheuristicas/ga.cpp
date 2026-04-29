@@ -190,6 +190,7 @@ Solution GeneticAlgorithm(const VRPInstance& instance, int numGeracoes, int tama
 		        filho = solucoes[idx1];
 		        //limpaRotasVazias(filho);
 		        filho = swapIntra(filho, instance);
+		        filho = swapInter(filho, instance);
 		        // filho = opt2(filho, instance);
 		        filho = crossExchange(filho, instance);
 		    }
@@ -197,6 +198,8 @@ Solution GeneticAlgorithm(const VRPInstance& instance, int numGeracoes, int tama
 		    if (probDist(gen) < probMutacao) {
 		            filho = randomRelocate(filho, instance);
 		            filho = randomOpt2(filho, instance);
+		            filho = randomSwapIntra(filho, instance);
+		            filho = randomSwapInter(filho, instance);
 	    	}
 
 	    	if (probDist(gen) < 0.2) {
@@ -207,6 +210,9 @@ Solution GeneticAlgorithm(const VRPInstance& instance, int numGeracoes, int tama
 				limpaRotasVazias(filho);
 		    	filho = swapIntra(filho, instance);
 
+		    	limpaRotasVazias(filho);
+		    	filho = swapInter(filho, instance);
+
 		    	limpaRotasVazias(filho);	
 		    	filho = opt2(filho, instance);
 
@@ -215,6 +221,9 @@ Solution GeneticAlgorithm(const VRPInstance& instance, int numGeracoes, int tama
 
 				limpaRotasVazias(filho);
 		    	filho = swapIntra(filho, instance);
+
+		    	limpaRotasVazias(filho);
+		    	filho = swapInter(filho, instance);
 
 		    	limpaRotasVazias(filho);
 				filho = crossExchange(filho, instance);
