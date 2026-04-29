@@ -30,16 +30,20 @@ static void limpaRotasVazias(Solution& solucao) {
 }
 
 static double calculaDeltaInsercao(const std::vector<int>& rota, int posicao, int cliente, const VRPInstance& instance) {
-    if (rota.size() < 2 || posicao <= 0 || posicao >= static_cast<int>(rota.size())) {
+    if (posicao < 0 || posicao > static_cast<int>(rota.size())) {
         return std::numeric_limits<double>::infinity();
     }
 
-    int anterior = rota[posicao - 1];
-    int proximo = rota[posicao];
+    const Node& anterior = (posicao == 0)
+        ? instance.getDepot()
+        : instance.getNode(rota[posicao - 1]);
+    const Node& proximo = (posicao == static_cast<int>(rota.size()))
+        ? instance.getDepot()
+        : instance.getNode(rota[posicao]);
 
-    return instance.distancia(instance.getNode(anterior), instance.getNode(cliente))
-         + instance.distancia(instance.getNode(cliente), instance.getNode(proximo))
-         - instance.distancia(instance.getNode(anterior), instance.getNode(proximo));
+    return instance.distancia(anterior, instance.getNode(cliente))
+         + instance.distancia(instance.getNode(cliente), proximo)
+         - instance.distancia(anterior, proximo);
 }
 
 static bool insercaoViavel(int cargaAtual, int cliente, const VRPInstance& instance) {
@@ -62,7 +66,7 @@ static std::vector<InsertionCandidate> gerarCandidatos(
                 continue;
             }
 
-            for (int posicao = 1; posicao < static_cast<int>(solucao.rotas[j].size()); posicao++) {
+            for (int posicao = 0; posicao <= static_cast<int>(solucao.rotas[j].size()); posicao++) {
                 double delta = calculaDeltaInsercao(solucao.rotas[j], posicao, cliente, instance);
 
                 if (std::isfinite(delta)) {
@@ -136,11 +140,7 @@ static void aplicarInsercao(
     int demandaCliente = instance.getNode(candidato.cliente).demanda;
 
     if (candidato.novaRota) {
-        std::vector<int> novaRota = {
-            instance.depot_id,
-            candidato.cliente,
-            instance.depot_id
-        };
+        std::vector<int> novaRota = { candidato.cliente };
         solucao.rotas.push_back(novaRota);
         cargasRotas.push_back(demandaCliente);
     } else {
@@ -246,18 +246,18 @@ Solution GRASP(const VRPInstance& instance, double tempoLimiteSegundos) {
     std::uniform_real_distribution<double> distReal(0.0, 1.0);
 
     const double ALPHA_MIN = 0.05;
-    const double ALPHA_MAX = 0.30;
-    const double ALPHA_PERTURBADO = 0.50;
+    const double ALPHA_MAX = 0.45;
+    const double ALPHA_PERTURBADO = 0.6;
     std::uniform_real_distribution<double> distAlpha(ALPHA_MIN, ALPHA_MAX);
 
     int iteracoesSemMelhora = 0;
-    const int LIMITE_ESTAGNACAO = 100;
+    const int LIMITE_ESTAGNACAO = 80;
     const int INTENSIDADE_INICIAL = 2;
-    const int INTENSIDADE_MAX = 5;
+    const int INTENSIDADE_MAX = 7;
     int intensidadePerturbacao = INTENSIDADE_INICIAL;
 
-    const double SA_TEMP_INICIAL = 100.0;
-    const double SA_ALPHA = 0.9995;
+    const double SA_TEMP_INICIAL = 150.0;
+    const double SA_ALPHA = 0.999;
     const double SA_TEMP_MIN = 0.01;
     double temperatura = SA_TEMP_INICIAL;
 
@@ -280,17 +280,14 @@ Solution GRASP(const VRPInstance& instance, double tempoLimiteSegundos) {
         double alpha;
 
         if (iteracoesSemMelhora >= LIMITE_ESTAGNACAO && !primeira) {
-            // NOVO: agora a perturbacao parte de "atual" em vez de "best".
             Solution sPerturbada = aplicarPerturbacao(atual, instance, intensidadePerturbacao, gen);
             sPerturbada = RVND(sPerturbada, instance, gen);
             sPerturbada.calculaCusto(instance);
 
-            // NOVO: agora o ALPHA_PERTURBADO realmente e usado numa reconstrucao GRASP apos estagnacao.
             Solution sReconstruida = constroiGreedyRandomized(instance, ALPHA_PERTURBADO, gen);
             sReconstruida = RVND(sReconstruida, instance, gen);
             sReconstruida.calculaCusto(instance);
 
-            // NOVO: escolhe a melhor entre a solucao perturbada e a reconstruida.
             s = (sReconstruida.getCusto() < sPerturbada.getCusto()) ? sReconstruida : sPerturbada;
 
             alpha = ALPHA_PERTURBADO;

@@ -10,6 +10,64 @@ struct Saving {
   double valor;
 };
 
+static bool empacotaPorDemanda(
+    const VRPInstance& instance,
+    const std::vector<int>& clientes,
+    std::vector<std::vector<int>>& rotas,
+    std::vector<int>& demandas,
+    size_t idx) {
+  if (idx == clientes.size()) return true;
+
+  const int cliente = clientes[idx];
+  const int demanda = instance.getNode(cliente).demanda;
+  int ultimaDemandaTestada = -1;
+
+  for (size_t r = 0; r < rotas.size(); r++) {
+    if (demandas[r] == ultimaDemandaTestada) continue;
+    if (demandas[r] + demanda > instance.capacity) continue;
+
+    rotas[r].push_back(cliente);
+    demandas[r] += demanda;
+
+    if (empacotaPorDemanda(instance, clientes, rotas, demandas, idx + 1)) {
+      return true;
+    }
+
+    demandas[r] -= demanda;
+    rotas[r].pop_back();
+    ultimaDemandaTestada = demandas[r];
+
+    if (demandas[r] == 0) break;
+  }
+
+  return false;
+}
+
+static void ordenaRotaPorVizinhoMaisProximo(
+    const VRPInstance& instance,
+    std::vector<int>& rota) {
+  std::vector<int> naoVisitados = rota;
+  rota.clear();
+
+  const Node* atual = &instance.getDepot();
+  while (!naoVisitados.empty()) {
+    auto melhor = naoVisitados.begin();
+    double melhorDist = std::numeric_limits<double>::max();
+
+    for (auto it = naoVisitados.begin(); it != naoVisitados.end(); ++it) {
+      double dist = instance.distancia(*atual, instance.getNode(*it));
+      if (dist < melhorDist) {
+        melhorDist = dist;
+        melhor = it;
+      }
+    }
+
+    rota.push_back(*melhor);
+    atual = &instance.getNode(*melhor);
+    naoVisitados.erase(melhor);
+  }
+}
+
 Solution clarkeWright(const VRPInstance& instance) {
   Solution solucao;
 
@@ -193,7 +251,40 @@ Solution clarkeWright(const VRPInstance& instance) {
       break;
     }
 
-    if (!esvaziou) break;
+    if (!esvaziou) {
+      std::vector<int> clientes;
+      clientes.reserve(instance.nodes.size() - 1);
+      for (const auto& rota : solucao.rotas) {
+        clientes.insert(clientes.end(), rota.begin(), rota.end());
+      }
+
+      std::sort(clientes.begin(), clientes.end(),
+                [&](int a, int b) {
+                  return instance.getNode(a).demanda > instance.getNode(b).demanda;
+                });
+
+      std::vector<std::vector<int>> rotasReempacotadas(instance.num_trucks);
+      std::vector<int> demandasReempacotadas(instance.num_trucks, 0);
+
+      if (empacotaPorDemanda(instance, clientes, rotasReempacotadas,
+                             demandasReempacotadas, 0)) {
+        for (auto& rota : rotasReempacotadas) {
+          ordenaRotaPorVizinhoMaisProximo(instance, rota);
+        }
+
+        rotasReempacotadas.erase(
+            std::remove_if(rotasReempacotadas.begin(), rotasReempacotadas.end(),
+                           [](const std::vector<int>& rota) { return rota.empty(); }),
+            rotasReempacotadas.end());
+        demandasReempacotadas.erase(
+            std::remove(demandasReempacotadas.begin(), demandasReempacotadas.end(), 0),
+            demandasReempacotadas.end());
+
+        solucao.rotas = rotasReempacotadas;
+        demandaRota = demandasReempacotadas;
+      }
+      break;
+    }
   }
 
   return solucao;

@@ -25,7 +25,7 @@ int main(int argc, char* argv[]) {
         std::cout << "Caminhões:    " << instance.num_trucks  << "\n";
         std::cout << "Otimo conhecido: " << instance.optimal_value << "\n";
 
-        auto t0 = std::chrono::steady_clock::now();
+        // auto t0 = std::chrono::steady_clock::now();
 
         // Solution solucaoNN = nearestN(instance);
         // solucaoNN.calculaCusto(instance);
@@ -37,28 +37,28 @@ int main(int argc, char* argv[]) {
         // std::cout << "========Clarke-Wright========" << "\n";
         // solucaoCW.imprime(instance);
 
-        // Solution solucao2opt = opt2(solucaoCW, instance);
-        // solucao2opt.calculaCusto(instance);
-        // // std::cout << "========2-opt========" << "\n";
-        // // solucao2opt.imprime(instance);
+        Solution solucao2opt = opt2(solucaoCW, instance);
+        solucao2opt.calculaCusto(instance);
+        // std::cout << "========2-opt========" << "\n";
+        // solucao2opt.imprime(instance);
 
-        // Solution solucaoRelocate = relocate(solucao2opt, instance);
-        // solucaoRelocate.calculaCusto(instance);
-        // // std::cout << "========Relocate========" << "\n";
-        // // solucaoRelocate.imprime(instance);
+        Solution solucaoRelocate = relocate(solucao2opt, instance);
+        solucaoRelocate.calculaCusto(instance);
+        // std::cout << "========Relocate========" << "\n";
+        // solucaoRelocate.imprime(instance);
 
-        // Solution solucaoSWAP = swapIntra(solucaoRelocate, instance);
-        // solucaoSWAP.calculaCusto(instance);
-        // // std::cout << "========Swap Intra========" << "\n";
-        // // solucaoSWAP.imprime(instance);
+        Solution solucaoSWAP = swapIntra(solucaoRelocate, instance);
+        solucaoSWAP.calculaCusto(instance);
+        // std::cout << "========Swap Intra========" << "\n";
+        // solucaoSWAP.imprime(instance);
 
-        // Solution solucaoCE = crossExchange(solucaoSWAP, instance);
-        // solucaoCE.calculaCusto(instance);
-        // // std::cout << "========Cross-Exchange========" << "\n";
-        // // solucaoCE.imprime(instance);
+        Solution solucaoCE = crossExchange(solucaoSWAP, instance);
+        solucaoCE.calculaCusto(instance);
+        // std::cout << "========Cross-Exchange========" << "\n";
+        // solucaoCE.imprime(instance);
 
-        // solucaoSWAP = swapIntra(solucaoCE, instance);
-        // solucaoSWAP.calculaCusto(instance);
+        solucaoSWAP = swapIntra(solucaoCE, instance);
+        solucaoSWAP.calculaCusto(instance);
         // std::cout << "========Swap Intra 2========" << "\n";
         // solucaoSWAP.imprime(instance);
 
@@ -98,7 +98,7 @@ int main(int argc, char* argv[]) {
         //                                        3, 2, 0.2, 0.75);
         // solucaoGA.imprime(instance);
 
-        std::cout << "========BRKGA========" << "\n";
+        // std::cout << "========BRKGA========" << "\n";
         // int tamanhoPopulacaoBRKGA, numGeracoesBRKGA, numElite;
         // double mutantes, probElite;
 
@@ -117,17 +117,17 @@ int main(int argc, char* argv[]) {
         // std::cout << "Probabilidade de selecionar elites: ";
         // std::cin >> probElite;
 
-        Solution solucaoBRKGA = BRKGA(instance, 4000, 120,
-                                               5, 0.1, 0.7);
+        // Solution solucaoBRKGA = BRKGA(instance, 4000, 120,
+        //                                        5, 0.1, 0.7);
 
-        solucaoBRKGA.imprime(instance);
+        // solucaoBRKGA.imprime(instance);
 
-        // std::cout << "========VNS========" << "\n";
-        // Solution solucaoVNS = VNS(solucaoSWAP, instance, 12, 600.0, 200.0, 0.9995, 200);
-        // solucaoVNS.imprime(instance);
+        std::cout << "========VNS========" << "\n";
+        Solution solucaoVNS = VNS(solucaoSWAP, instance, 15, 1800.0, 200.0, 0.9995, 200);
+        solucaoVNS.imprime(instance);
 
         // std::cout << "========GRASP========" << "\n";
-        // Solution solucaoGRASP = GRASP(instance, 1800.0);
+        // Solution solucaoGRASP = GRASP(instance, 900.0);
         // solucaoGRASP.imprime(instance);
     }
     catch (const std::exception& e) {
