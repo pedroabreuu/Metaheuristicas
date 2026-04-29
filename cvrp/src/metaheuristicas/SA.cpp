@@ -10,6 +10,7 @@
 
 Solution SimulatedAnnealing(Solution solucao, const VRPInstance& instance, double To, int SAmax, double alpha) {
     auto inicio = std::chrono::steady_clock::now();
+    int maxMelhoraTemp = 100;
     auto tempoBest = inicio;
     int iterT = 0;
     double Temp = To;
@@ -197,11 +198,18 @@ Solution SimulatedAnnealing(Solution solucao, const VRPInstance& instance, doubl
             semMelhoraTemp++;
         }
 
-        if (semMelhoraTemp >= limiteSemMelhoraTemp) {
-            Temp = std::max(Temp, To * 0.35);
+        if (semMelhoraTemp >= limiteSemMelhoraTemp && maxMelhoraTemp > 0) {
+            Temp = std::max(Temp, To * 0.05);
             corrente = best;
             corrente = intensificaParcial(corrente);
             semMelhoraTemp = 0;
+            maxMelhoraTemp--;
+        }
+
+        if (maxMelhoraTemp <= 0) {
+            corrente = randomOpt2(corrente, instance);
+            corrente = randomRelocate(corrente, instance);
+            corrente = randomCrossExchange(corrente, instance);
         }
 
         Temp *= alpha;

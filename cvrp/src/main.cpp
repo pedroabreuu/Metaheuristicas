@@ -11,6 +11,7 @@
 #include "metaheuristicas/ga.h"
 #include "metaheuristicas/BRKGA.h"
 #include "metaheuristicas/vns.h"
+#include "metaheuristicas/grasp.h"
 
 int main(int argc, char* argv[]) {
     std::string filepath = (argc > 1) ? argv[1] : "data/A-n32-k5.vrp";
@@ -24,17 +25,17 @@ int main(int argc, char* argv[]) {
         std::cout << "Caminhões:    " << instance.num_trucks  << "\n";
         std::cout << "Otimo conhecido: " << instance.optimal_value << "\n";
 
+        // auto t0 = std::chrono::steady_clock::now();
+
         // Solution solucaoNN = nearestN(instance);
         // solucaoNN.calculaCusto(instance);
         // std::cout << "========Nearest Neighbor========" << "\n";
         // solucaoNN.imprime(instance);
 
-        // auto t0 = std::chrono::steady_clock::now();
-
         Solution solucaoCW = clarkeWright(instance);
         solucaoCW.calculaCusto(instance);
-        //std::cout << "========Clarke-Wright========" << "\n";
-        //solucaoCW.imprime(instance);
+        // std::cout << "========Clarke-Wright========" << "\n";
+        // solucaoCW.imprime(instance);
 
         Solution solucao2opt = opt2(solucaoCW, instance);
         solucao2opt.calculaCusto(instance);
@@ -43,33 +44,33 @@ int main(int argc, char* argv[]) {
 
         Solution solucaoRelocate = relocate(solucao2opt, instance);
         solucaoRelocate.calculaCusto(instance);
-        std::cout << "========Relocate========" << "\n";
-        solucaoRelocate.imprime(instance);
+        // std::cout << "========Relocate========" << "\n";
+        // solucaoRelocate.imprime(instance);
 
         Solution solucaoSWAP = swapIntra(solucaoRelocate, instance);
         solucaoSWAP.calculaCusto(instance);
-        std::cout << "========Swap Intra========" << "\n";
-        solucaoSWAP.imprime(instance);
+        // std::cout << "========Swap Intra========" << "\n";
+        // solucaoSWAP.imprime(instance);
 
         Solution solucaoCE = crossExchange(solucaoSWAP, instance);
         solucaoCE.calculaCusto(instance);
-        std::cout << "========Cross-Exchange========" << "\n";
-        solucaoCE.imprime(instance);
+        // std::cout << "========Cross-Exchange========" << "\n";
+        // solucaoCE.imprime(instance);
 
         solucaoSWAP = swapIntra(solucaoCE, instance);
         solucaoSWAP.calculaCusto(instance);
-        std::cout << "========Swap Intra 2========" << "\n";
-        solucaoSWAP.imprime(instance);
+        // std::cout << "========Swap Intra 2========" << "\n";
+        // solucaoSWAP.imprime(instance);
 
         // auto t1 = std::chrono::steady_clock::now();
         // double tempoCW = std::chrono::duration<double>(t1 - t0).count();
         // std::cout << "CW+2opt+Relocate+Swap+CrossExchange: "
-        //           << solucaoCE.custoTotal << " em " << tempoCW << "s" << std::endl;
+        //           << solucaoSWAP.custoTotal << " em " << tempoCW << "s" << std::endl;
 
-        Solution solucaoSA = SimulatedAnnealing(solucaoCW, instance, 1000.0, 2000, 0.995);
-        solucaoSA.calculaCusto(instance);
-        std::cout << "========Simulated Annealing========" << "\n";
-        solucaoSA.imprime(instance);
+        // Solution solucaoSA = SimulatedAnnealing(solucaoCW, instance, 1000.0, 2000, 0.9995);
+        // solucaoSA.calculaCusto(instance);
+        // std::cout << "========Simulated Annealing========" << "\n";
+        // solucaoSA.imprime(instance);
 
         // std::cout << "========Algoritmo Genético========" << "\n";
         // int tamanhoPopulacao, numGeracoes, tamanhoTorneio, elitismo;
@@ -93,8 +94,8 @@ int main(int argc, char* argv[]) {
         // std::cout << "Probabilidade de crossover (0.0 a 1.0): ";
         // std::cin >> probCrossover;
          
-        // Solution solucaoGA = GeneticAlgorithm(instance, numGeracoes, tamanhoPopulacao,
-        //                                        tamanhoTorneio, elitismo, probMutacao, probCrossover);
+        // Solution solucaoGA = GeneticAlgorithm(instance, 5000, 150,
+        //                                        3, 2, 0.2, 0.75);
         // solucaoGA.imprime(instance);
 
         // std::cout << "========BRKGA========" << "\n";
@@ -116,14 +117,18 @@ int main(int argc, char* argv[]) {
         // std::cout << "Probabilidade de selecionar elites: ";
         // std::cin >> probElite;
 
-        // Solution solucaoBRKGA = BRKGA(instance, numGeracoesBRKGA, tamanhoPopulacaoBRKGA,
-        //                                        numElite, mutantes, probElite);
+        // Solution solucaoBRKGA = BRKGA(instance, 4000, 120,
+        //                                        5, 0.1, 0.7);
 
         // solucaoBRKGA.imprime(instance);
 
-        // std::cout << "========VNS========" << "\n";
-        // Solution solucaoVNS = VNS(solucaoSWAP, instance, 7, 600.0, 200.0, 0.9995, 100);
-        // solucaoVNS.imprime(instance);
+        std::cout << "========VNS========" << "\n";
+        Solution solucaoVNS = VNS(solucaoSWAP, instance, 15, 1800.0, 200.0, 0.9995, 200);
+        solucaoVNS.imprime(instance);
+
+        // std::cout << "========GRASP========" << "\n";
+        // Solution solucaoGRASP = GRASP(instance, 900.0);
+        // solucaoGRASP.imprime(instance);
     }
     catch (const std::exception& e) {
         std::cerr << "Erro: " << e.what() << "\n";
