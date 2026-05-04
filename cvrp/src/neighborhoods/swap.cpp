@@ -12,28 +12,11 @@ static int cargaRota(const std::vector<int>& rota, const VRPInstance& instance) 
     return carga;
 }
 
-static double custoRota(const std::vector<int>& rota, const VRPInstance& instance) {
-    double custo = 0.0;
-    const Node& depot = instance.getDepot();
-    const Node* anterior = &depot;
-
-    for (int clienteId : rota) {
-        const Node& cliente = instance.getNode(clienteId);
-        custo += instance.distancia(*anterior, cliente);
-        anterior = &cliente;
-    }
-
-    custo += instance.distancia(*anterior, depot);
-    return custo;
-}
-
 Solution swapIntra(Solution solucao, const VRPInstance& instance) {
     const Node& depot = instance.getDepot();
-    const auto& nodes = instance.nodes;
-    const auto& mapa = instance.mapa;
 
     auto nodeById = [&](int id) -> const Node& {
-        return nodes[mapa.at(id)];
+        return instance.getNode(id);
     };
 
     bool melhorou = true;
@@ -98,12 +81,16 @@ Solution swapIntra(Solution solucao, const VRPInstance& instance) {
 }
 
 Solution swapInter(Solution solucao, const VRPInstance& instance) {
+    const Node& depot = instance.getDepot();
+
+    auto nodeById = [&](int id) -> const Node& {
+        return instance.getNode(id);
+    };
+
     std::vector<int> cargaRotas(solucao.rotas.size(), 0);
-    std::vector<double> custoRotas(solucao.rotas.size(), 0.0);
 
     for (size_t r = 0; r < solucao.rotas.size(); r++) {
         cargaRotas[r] = cargaRota(solucao.rotas[r], instance);
-        custoRotas[r] = custoRota(solucao.rotas[r], instance);
     }
 
     bool melhorou = true;
@@ -138,12 +125,19 @@ Solution swapInter(Solution solucao, const VRPInstance& instance) {
                             continue;
                         }
 
-                        std::vector<int> rota1Nova = solucao.rotas[r1];
-                        std::vector<int> rota2Nova = solucao.rotas[r2];
-                        std::swap(rota1Nova[i], rota2Nova[j]);
+                        const auto& rota1 = solucao.rotas[r1];
+                        const auto& rota2 = solucao.rotas[r2];
+                        const Node& u = nodeById(cliente1);
+                        const Node& v = nodeById(cliente2);
+                        const Node& a = (i == 0) ? depot : nodeById(rota1[i - 1]);
+                        const Node& b = (i + 1 == rota1.size()) ? depot : nodeById(rota1[i + 1]);
+                        const Node& c = (j == 0) ? depot : nodeById(rota2[j - 1]);
+                        const Node& d = (j + 1 == rota2.size()) ? depot : nodeById(rota2[j + 1]);
 
-                        const double antes = custoRotas[r1] + custoRotas[r2];
-                        const double depois = custoRota(rota1Nova, instance) + custoRota(rota2Nova, instance);
+                        const double antes = instance.distancia(a, u) + instance.distancia(u, b)
+                                           + instance.distancia(c, v) + instance.distancia(v, d);
+                        const double depois = instance.distancia(a, v) + instance.distancia(v, b)
+                                            + instance.distancia(c, u) + instance.distancia(u, d);
                         const double delta = depois - antes;
 
                         if (delta < bestDelta) {
@@ -171,8 +165,6 @@ Solution swapInter(Solution solucao, const VRPInstance& instance) {
                 - instance.getNode(cliente2).demanda
                 + instance.getNode(cliente1).demanda;
 
-            custoRotas[bestR1] = custoRota(solucao.rotas[bestR1], instance);
-            custoRotas[bestR2] = custoRota(solucao.rotas[bestR2], instance);
             melhorou = true;
         }
     }

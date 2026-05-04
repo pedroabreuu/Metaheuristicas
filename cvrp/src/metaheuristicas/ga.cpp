@@ -5,6 +5,7 @@
 #include <climits>
 #include <unordered_set>
 #include <chrono>
+#include <utility>
 #include "core/Solution.h"
 #include "metaheuristicas/ga.h"
 #include "neighborhoods/2opt.h"
@@ -186,47 +187,47 @@ Solution GeneticAlgorithm(const VRPInstance& instance, int numGeracoes, int tama
 
 		    if (probDist(gen) < probCrossover && idx1 != idx2) {
 		        filho = crossoverOX(solucoes[idx1], solucoes[idx2], instance, gen);
-		    } else {
-		        filho = solucoes[idx1];
-		        //limpaRotasVazias(filho);
-		        filho = swapIntra(filho, instance);
-		        filho = swapInter(filho, instance);
-		        // filho = opt2(filho, instance);
-		        filho = crossExchange(filho, instance);
-		    }
+			    } else {
+			        filho = solucoes[idx1];
+			        //limpaRotasVazias(filho);
+			        filho = swapIntra(std::move(filho), instance);
+			        filho = swapInter(std::move(filho), instance);
+			        // filho = opt2(filho, instance);
+			        filho = crossExchange(std::move(filho), instance);
+			    }
 
-		    if (probDist(gen) < probMutacao) {
-		            filho = randomRelocate(filho, instance);
-		            filho = randomOpt2(filho, instance);
-		            filho = randomSwapIntra(filho, instance);
-		            filho = randomSwapInter(filho, instance);
+			    if (probDist(gen) < probMutacao) {
+		            filho = randomRelocate(std::move(filho), instance);
+		            filho = randomOpt2(std::move(filho), instance);
+		            filho = randomSwapIntra(std::move(filho), instance);
+		            filho = randomSwapInter(std::move(filho), instance);
 	    	}
 
 	    	if (probDist(gen) < 0.2) {
 
 	    		limpaRotasVazias(filho);
-				filho = crossExchange(filho, instance);
+				filho = crossExchange(std::move(filho), instance);
 
 				limpaRotasVazias(filho);
-		    	filho = swapIntra(filho, instance);
+		    	filho = swapIntra(std::move(filho), instance);
 
 		    	limpaRotasVazias(filho);
-		    	filho = swapInter(filho, instance);
+		    	filho = swapInter(std::move(filho), instance);
 
 		    	limpaRotasVazias(filho);	
-		    	filho = opt2(filho, instance);
+		    	filho = opt2(std::move(filho), instance);
 
 	    		limpaRotasVazias(filho);
-				filho = relocate(filho, instance);
+				filho = relocate(std::move(filho), instance);
 
 				limpaRotasVazias(filho);
-		    	filho = swapIntra(filho, instance);
+		    	filho = swapIntra(std::move(filho), instance);
 
 		    	limpaRotasVazias(filho);
-		    	filho = swapInter(filho, instance);
+		    	filho = swapInter(std::move(filho), instance);
 
 		    	limpaRotasVazias(filho);
-				filho = crossExchange(filho, instance);
+				filho = crossExchange(std::move(filho), instance);
 	    	}
 
 			limpaRotasVazias(filho);

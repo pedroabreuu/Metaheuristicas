@@ -4,6 +4,7 @@
 #include <cmath>
 #include <algorithm>
 #include <iostream>
+#include <utility>
 #include "metaheuristicas/vns.h"
 #include "neighborhoods/2opt.h"
 #include "neighborhoods/relocate.h"
@@ -56,7 +57,7 @@ Solution perturbar(Solution solucao, const VRPInstance& instance, int k) {
 
     for (int i = 0; i < k; i++) {
         int indicePerturbacao = perturbacao(gen);
-        solucao = perturbacoes[indicePerturbacao](solucao, instance);
+        solucao = perturbacoes[indicePerturbacao](std::move(solucao), instance);
         limpaRotasVazias(solucao);
     }
 

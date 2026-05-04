@@ -2,6 +2,7 @@
 #include <iostream>
 #include <cmath>
 #include <chrono>
+#include <utility>
 #include "metaheuristicas/SA.h"
 #include "neighborhoods/relocate.h"
 #include "neighborhoods/2opt.h"
@@ -59,30 +60,35 @@ Solution SimulatedAnnealing(Solution solucao, const VRPInstance& instance, doubl
             melhorou = false;
 
             Solution s1 = opt2(s, instance);
+            s1.calculaCusto(instance);
             if (s1.custoTotal < s.custoTotal) {
                 s = s1;
                 melhorou = true;
             }
 
             Solution s2 = relocate(s, instance);
+            s2.calculaCusto(instance);
             if (s2.custoTotal < s.custoTotal) {
                 s = s2;
                 melhorou = true;
             }
 
             Solution s3 = swapIntra(s, instance);
+            s3.calculaCusto(instance);
             if (s3.custoTotal < s.custoTotal) {
                 s = s3;
                 melhorou = true;
             }
 
             Solution s4 = crossExchange(s, instance);
+            s4.calculaCusto(instance);
             if (s4.custoTotal < s.custoTotal) {
                 s = s4;
                 melhorou = true;
             }
 
             Solution s5 = swapInter(s, instance);
+            s5.calculaCusto(instance);
             if (s5.custoTotal < s.custoTotal) {
                 s = s5;
                 melhorou = true;
@@ -233,15 +239,15 @@ Solution SimulatedAnnealing(Solution solucao, const VRPInstance& instance, doubl
         }
 
         if (maxMelhoraTemp <= 0) {
-            corrente = randomOpt2(corrente, instance);
-            corrente = randomRelocate(corrente, instance);
-            corrente = randomCrossExchange(corrente, instance);
-            corrente = randomSwapIntra(corrente, instance);
-            corrente = randomSwapInter(corrente, instance);
+            corrente = randomOpt2(std::move(corrente), instance);
+            corrente = randomRelocate(std::move(corrente), instance);
+            corrente = randomCrossExchange(std::move(corrente), instance);
+            corrente = randomSwapIntra(std::move(corrente), instance);
+            corrente = randomSwapInter(std::move(corrente), instance);
         }
 
         Temp *= alpha;
-        std::cout << "Temp=" << Temp << " corrente=" << corrente.custoTotal << " best=" << best.custoTotal << std::endl;
+        //std::cout << "Temp=" << Temp << " corrente=" << corrente.custoTotal << " best=" << best.custoTotal << std::endl;
     }
 
     bool melhorou = true;
@@ -249,21 +255,27 @@ Solution SimulatedAnnealing(Solution solucao, const VRPInstance& instance, doubl
         melhorou = false;
 
         Solution s1 = opt2(best, instance);
+        s1.calculaCusto(instance);
         if (s1.custoTotal < best.custoTotal) { best = s1; melhorou = true; continue; }
 
         Solution s2 = relocate(best, instance);
+        s2.calculaCusto(instance);
         if (s2.custoTotal < best.custoTotal) { best = s2; melhorou = true; continue; }
 
         Solution s3 = swapIntra(best, instance);
+        s3.calculaCusto(instance);
         if (s3.custoTotal < best.custoTotal) { best = s3; melhorou = true; continue; }
 
         Solution s4 = crossExchange(best, instance);
+        s4.calculaCusto(instance);
         if (s4.custoTotal < best.custoTotal) { best = s4; melhorou = true; continue; }
 
         Solution s5 = swapIntra(best, instance);
+        s5.calculaCusto(instance);
         if (s5.custoTotal < best.custoTotal) { best = s5; melhorou = true; continue; }
 
         Solution s6 = swapInter(best, instance);
+        s6.calculaCusto(instance);
         if (s6.custoTotal < best.custoTotal) { best = s6; melhorou = true; continue; }
     }
 

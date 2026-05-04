@@ -5,11 +5,9 @@
 
 Solution relocate(Solution solucao, const VRPInstance& instance) {
   const Node& depot = instance.getDepot();
-  const auto& nodes = instance.nodes;
-  const auto& mapa = instance.mapa;
 
   auto nodeById = [&](int id) -> const Node& {
-    return nodes[mapa.at(id)];
+    return instance.getNode(id);
   };
 
   std::vector<int> cargaRotas(solucao.rotas.size(), 0);

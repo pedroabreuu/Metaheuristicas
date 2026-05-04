@@ -5,6 +5,7 @@
 #include <limits>
 #include <chrono>
 #include <cmath>
+#include <utility>
 #include "metaheuristicas/grasp.h"
 #include "metaheuristicas/vns.h"
 #include "neighborhoods/2opt.h"
@@ -57,6 +58,11 @@ static std::vector<InsertionCandidate> gerarCandidatos(
     const VRPInstance& instance
 ) {
     std::vector<InsertionCandidate> candidatos;
+    size_t totalPosicoes = 0;
+    for (const auto& rota : solucao.rotas) {
+        totalPosicoes += rota.size() + 1;
+    }
+    candidatos.reserve(naoInseridos.size() * std::max<size_t>(1, totalPosicoes));
 
     for (int cliente : naoInseridos) {
         bool temInsercaoViavel = false;
@@ -106,6 +112,8 @@ static std::vector<InsertionCandidate> montarRCL(const std::vector<InsertionCand
     if (candidatos.empty()) {
         return rcl;
     }
+
+    rcl.reserve(candidatos.size());
 
     double deltaMin = candidatos.front().delta;
     double deltaMax = candidatos.front().delta;
@@ -232,7 +240,7 @@ static Solution aplicarPerturbacao(const Solution& solucao, const VRPInstance& i
 
     for (int i = 0; i < intensidade; i++) {
         int tipo = distTipo(gen);
-        perturbada = perturbacoes[tipo](perturbada, instance);
+        perturbada = perturbacoes[tipo](std::move(perturbada), instance);
         limpaRotasVazias(perturbada);
     }
 
@@ -246,19 +254,19 @@ Solution GRASP(const VRPInstance& instance, double tempoLimiteSegundos) {
     std::uniform_real_distribution<double> distReal(0.0, 1.0);
 
     const double ALPHA_MIN = 0.05;
-    const double ALPHA_MAX = 0.35;
-    const double ALPHA_PERTURBADO = 0.5;
+    const double ALPHA_MAX = 0.4;
+    const double ALPHA_PERTURBADO = 0.55;
     std::uniform_real_distribution<double> distAlpha(ALPHA_MIN, ALPHA_MAX);
 
     int iteracoesSemMelhora = 0;
-    const int LIMITE_ESTAGNACAO = 100;
+    const int LIMITE_ESTAGNACAO = 150;
     const int INTENSIDADE_INICIAL = 1;
     const int INTENSIDADE_MAX = 10;
     int intensidadePerturbacao = INTENSIDADE_INICIAL;
 
-    const double SA_TEMP_INICIAL = 150.0;
+    const double SA_TEMP_INICIAL = 200.0;
     const double SA_ALPHA = 0.9995;
-    const double SA_TEMP_MIN = 0.01;
+    const double SA_TEMP_MIN = 0.1;
     double temperatura = SA_TEMP_INICIAL;
 
     auto inicio = std::chrono::steady_clock::now();

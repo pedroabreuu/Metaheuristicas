@@ -6,11 +6,9 @@
 
 Solution opt2(Solution solucao, const VRPInstance& instance) {
     const Node& depot = instance.getDepot();
-    const auto& nodes = instance.nodes;
-    const auto& mapa = instance.mapa;
 
     auto nodeById = [&](int id) -> const Node& {
-        return nodes[mapa.at(id)];
+        return instance.getNode(id);
     };
 
     for (size_t i = 0; i < solucao.rotas.size(); i++) {

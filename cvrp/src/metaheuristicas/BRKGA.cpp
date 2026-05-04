@@ -4,6 +4,7 @@
 #include <vector>
 #include <climits>
 #include <chrono>
+#include <utility>
 #include "metaheuristicas/BRKGA.h"
 #include "neighborhoods/2opt.h"
 #include "neighborhoods/relocate.h"
@@ -102,16 +103,16 @@ static void decodificaEAvalia(Cromossomo& c, const VRPInstance& instance) {
     c.solution = decoder(c, instance);
 
     limpaRotasVazias(c.solution);
-    c.solution = opt2(c.solution, instance);
+    c.solution = opt2(std::move(c.solution), instance);
 
     limpaRotasVazias(c.solution);
-    c.solution = relocate(c.solution, instance);    
+    c.solution = relocate(std::move(c.solution), instance);    
 
     limpaRotasVazias(c.solution);
-    c.solution = swapIntra(c.solution, instance);
+    c.solution = swapIntra(std::move(c.solution), instance);
 
     limpaRotasVazias(c.solution);
-    c.solution = crossExchange(c.solution, instance);
+    c.solution = crossExchange(std::move(c.solution), instance);
 
     limpaRotasVazias(c.solution);
     c.solution.calculaCusto(instance);
