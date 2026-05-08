@@ -37,4 +37,20 @@ Passando uma instância específica como argumento:
 ```
 ---
 
+## Como rodar o .sh
 
+Compilar (caso tenha feito alterações):
+
+```bash
+cmake --build build -j
+```
+
+```bash
+chmod +x run.sh
+```
+
+Escolhendo o grupo de instâncias:
+
+```bash
+./run.sh --group A
+```
