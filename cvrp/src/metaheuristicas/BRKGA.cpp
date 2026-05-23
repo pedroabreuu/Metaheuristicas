@@ -1,12 +1,15 @@
 #include <random>
 #include <iostream>
 #include <algorithm>
+#include <cmath>
 #include <vector>
 #include <climits>
 #include <chrono>
 #include <utility>
 #include "metaheuristicas/BRKGA.h"
 #include "neighborhoods/2opt.h"
+#include "neighborhoods/2optStar.h"
+#include "neighborhoods/orOpt.h"
 #include "neighborhoods/relocate.h"
 #include "neighborhoods/swap.h"
 #include "neighborhoods/crossE.h"
@@ -31,10 +34,6 @@ static Cromossomo gerarCromossomoAleatorio(const VRPInstance& instance, std::mt1
 }
 
 static Solution decoder(const Cromossomo& cromossomo, const VRPInstance& instance) {
-    int demandaAcumulada = 0;
-    std::vector<int> rotaAtual;
-    Solution solucao;
-
     std::vector<std::pair<double, int>> pares;
     pares.reserve(cromossomo.keys.size());
 
@@ -48,31 +47,81 @@ static Solution decoder(const Cromossomo& cromossomo, const VRPInstance& instanc
             return a.first < b.first;
         });
 
-    for (const auto& [key, cliente] : pares) {
-        int demanda = instance.getNode(cliente).demanda;
+    const int n = static_cast<int>(pares.size());
+    std::vector<int> clientes(n);
+    for (int i = 0; i < n; i++) clientes[i] = pares[static_cast<size_t>(i)].second;
 
-        if (demandaAcumulada + demanda <= instance.capacity) {
-            rotaAtual.push_back(cliente);
-            demandaAcumulada += demanda;
-        } else {
-            if (!rotaAtual.empty()) {
-                solucao.rotas.push_back(rotaAtual);
-            }
-            rotaAtual.clear();
-            rotaAtual.push_back(cliente);
-            demandaAcumulada = demanda;
+    const Node& depot = instance.getDepot();
+    std::vector<std::vector<double>> custo(n, std::vector<double>(n, std::numeric_limits<double>::infinity()));
+
+    for (int i = 0; i < n; i++) {
+        int carga = 0;
+        double custoAtual = 0.0;
+        const Node* anterior = &depot;
+        for (int j = i; j < n; j++) {
+            const Node& cliente = instance.getNode(clientes[static_cast<size_t>(j)]);
+            carga += cliente.demanda;
+            if (carga > instance.capacity) break;
+            custoAtual += instance.distancia(*anterior, cliente);
+            anterior = &cliente;
+            custo[i][j] = custoAtual + instance.distancia(*anterior, depot);
         }
     }
 
-    if (!rotaAtual.empty()) {
-        solucao.rotas.push_back(rotaAtual);
+    int maxRotas = (instance.num_trucks > 0) ? instance.num_trucks : n;
+    constexpr double INF = 1e18;
+    std::vector<std::vector<double>> dp(maxRotas + 1, std::vector<double>(n + 1, INF));
+    std::vector<std::vector<int>> pred(maxRotas + 1, std::vector<int>(n + 1, -1));
+    dp[0][0] = 0.0;
+
+    for (int r = 1; r <= maxRotas; r++) {
+        for (int j = 1; j <= n; j++) {
+            for (int i = 0; i < j; i++) {
+                if (!std::isfinite(custo[i][j - 1]) || dp[r - 1][i] >= INF) continue;
+                double candidato = dp[r - 1][i] + custo[i][j - 1];
+                if (candidato < dp[r][j]) {
+                    dp[r][j] = candidato;
+                    pred[r][j] = i;
+                }
+            }
+        }
     }
 
-    solucao.rotas.erase(
-    std::remove_if(solucao.rotas.begin(), solucao.rotas.end(),
-        [](const std::vector<int>& rota) { return rota.empty(); }),
-    solucao.rotas.end());
+    int melhorR = 1;
+    for (int r = 2; r <= maxRotas; r++) {
+        if (dp[r][n] < dp[melhorR][n]) melhorR = r;
+    }
 
+    Solution solucao;
+    if (pred[melhorR][n] == -1) {
+        std::vector<int> rotaAtual;
+        int carga = 0;
+        for (int cliente : clientes) {
+            int dem = instance.getNode(cliente).demanda;
+            if (!rotaAtual.empty() && carga + dem > instance.capacity) {
+                solucao.rotas.push_back(rotaAtual);
+                rotaAtual.clear();
+                carga = 0;
+            }
+            rotaAtual.push_back(cliente);
+            carga += dem;
+        }
+        if (!rotaAtual.empty()) solucao.rotas.push_back(rotaAtual);
+        return solucao;
+    }
+
+    int j = n;
+    int r = melhorR;
+    while (j > 0 && r > 0) {
+        int i = pred[r][j];
+        if (i < 0) break;
+        std::vector<int> rota;
+        for (int p = i; p < j; p++) rota.push_back(clientes[static_cast<size_t>(p)]);
+        solucao.rotas.push_back(std::move(rota));
+        j = i;
+        r--;
+    }
+    std::reverse(solucao.rotas.begin(), solucao.rotas.end());
     return solucao;
 }
 
@@ -102,17 +151,31 @@ static void limpaRotasVazias(Solution& solucao) {
 static void decodificaEAvalia(Cromossomo& c, const VRPInstance& instance) {
     c.solution = decoder(c, instance);
 
-    limpaRotasVazias(c.solution);
-    c.solution = opt2(std::move(c.solution), instance);
+    std::vector<Solution (*)(Solution, const VRPInstance&)> vizinhancas = {
+        opt2,
+        relocate,
+        orOptIntra3,
+        orOptInter3,
+        swapIntra,
+        swapInter,
+        crossExchange,
+        opt2Star
+    };
 
-    limpaRotasVazias(c.solution);
-    c.solution = relocate(std::move(c.solution), instance);    
-
-    limpaRotasVazias(c.solution);
-    c.solution = swapIntra(std::move(c.solution), instance);
-
-    limpaRotasVazias(c.solution);
-    c.solution = crossExchange(std::move(c.solution), instance);
+    c.solution.calculaCusto(instance);
+    int k = 0;
+    while (k < static_cast<int>(vizinhancas.size())) {
+        limpaRotasVazias(c.solution);
+        Solution candidata = vizinhancas[k](c.solution, instance);
+        limpaRotasVazias(candidata);
+        candidata.calculaCusto(instance);
+        if (candidata.custoTotal < c.solution.custoTotal) {
+            c.solution = std::move(candidata);
+            k = 0;
+        } else {
+            k++;
+        }
+    }
 
     limpaRotasVazias(c.solution);
     c.solution.calculaCusto(instance);

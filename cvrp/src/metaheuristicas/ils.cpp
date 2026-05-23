@@ -10,6 +10,8 @@
 #include "utils/CWSavings.h"
 #include "metaheuristicas/ils.h"
 #include "neighborhoods/2opt.h"
+#include "neighborhoods/2optStar.h"
+#include "neighborhoods/orOpt.h"
 #include "neighborhoods/relocate.h"
 #include "neighborhoods/swap.h"
 #include "neighborhoods/crossE.h"
@@ -21,7 +23,9 @@ enum class TipoPerturbacao {
     Opt2,
     CrossExchange,
     SwapIntra,
-    SwapInter
+    SwapInter,
+    OrOptInter,
+    Opt2Star
 };
 
 struct ResultadoPerturbacao {
@@ -38,7 +42,16 @@ static void limpaRotasVazias(Solution& solucao) {
 
 static Solution VND(Solution solucao, const VRPInstance& instance, std::mt19937& gen) {
     limpaRotasVazias(solucao);
-    std::vector<NeighborhoodFunc> vizinhancas = {opt2, relocate, swapIntra, swapInter, crossExchange};
+    std::vector<NeighborhoodFunc> vizinhancas = {
+        opt2,
+        relocate,
+        orOptIntra3,
+        orOptInter3,
+        swapIntra,
+        swapInter,
+        crossExchange,
+        opt2Star
+    };
     std::shuffle(vizinhancas.begin(), vizinhancas.end(), gen);
 
     solucao.calculaCusto(instance);
@@ -57,7 +70,7 @@ static Solution VND(Solution solucao, const VRPInstance& instance, std::mt19937&
         }
     }
 
-    return std::move(solucao);
+    return solucao;
 }
 
 static Solution aplicaPerturbacao(
@@ -76,9 +89,13 @@ static Solution aplicaPerturbacao(
             return randomSwapIntra(std::move(solucao), instance);
         case TipoPerturbacao::SwapInter:
             return randomSwapInter(std::move(solucao), instance);
+        case TipoPerturbacao::OrOptInter:
+            return randomOrOptInter(std::move(solucao), instance, 3);
+        case TipoPerturbacao::Opt2Star:
+            return randomOpt2Star(std::move(solucao), instance);
     }
 
-    return std::move(solucao);
+    return solucao;
 }
 
 static ResultadoPerturbacao perturbar(
@@ -93,7 +110,9 @@ static ResultadoPerturbacao perturbar(
         TipoPerturbacao::Opt2,
         TipoPerturbacao::CrossExchange,
         TipoPerturbacao::SwapIntra,
-        TipoPerturbacao::SwapInter
+        TipoPerturbacao::SwapInter,
+        TipoPerturbacao::OrOptInter,
+        TipoPerturbacao::Opt2Star
     };
 
     std::discrete_distribution<int> perturbacao(pesosOperadores.begin(), pesosOperadores.end());
@@ -127,7 +146,9 @@ static Solution perturbarForte(
         TipoPerturbacao::Opt2,
         TipoPerturbacao::CrossExchange,
         TipoPerturbacao::SwapIntra,
-        TipoPerturbacao::SwapInter
+        TipoPerturbacao::SwapInter,
+        TipoPerturbacao::OrOptInter,
+        TipoPerturbacao::Opt2Star
     };
 
     std::shuffle(perturbacoes.begin(), perturbacoes.end(), gen);
@@ -140,7 +161,7 @@ static Solution perturbarForte(
     }
 
     limpaRotasVazias(solucao);
-    return std::move(solucao);
+    return solucao;
 }
 
 static Solution constroiAleatoria(const VRPInstance& instance, std::mt19937& gen) {
@@ -233,23 +254,21 @@ static void recompensaOperadores(std::vector<double>& pesosOperadores, const std
 Solution ILS(
     const VRPInstance& instance,
     double tempoLimite,
-    double tempInicial,
-    double alpha,
     int iterSemMelhoraMax,
     int Bmin,
     int Bmax,
-    int BmaxStuck,
-    unsigned seed
+    int BmaxStuck
 ) {
-    std::mt19937 gen(seed);
+    std::mt19937 gen(std::random_device{}());
     std::uniform_real_distribution<> dist(0.0, 1.0);
-    (void) tempInicial;
-    (void) alpha;
 
     Bmin = std::max(1, Bmin);
     Bmax = std::max(Bmin, Bmax);
     BmaxStuck = std::max(Bmax, BmaxStuck);
-    std::uniform_int_distribution<> betaDist(Bmin, Bmax);
+    const int baseBmin = Bmin;
+    const int baseBmax = Bmax;
+    int bMinAtual = Bmin;
+    int bMaxAtual = Bmax;
 
     auto inicio = std::chrono::steady_clock::now();
     auto tempoBest = inicio;
@@ -262,7 +281,7 @@ Solution ILS(
     double temperatura = temperaturaInicial;
     int iterSemMelhora = 0;
     int iteracao = 0;
-    std::vector<double> pesosOperadores(5, 1.0);
+    std::vector<double> pesosOperadores(7, 1.0);
 
     std::cout << "ILS inicio | Custo: " << best.custoTotal << std::endl;
 
@@ -276,6 +295,7 @@ Solution ILS(
         double tempoDecorrido = std::chrono::duration<double>(agora - inicio).count();
         if (tempoDecorrido >= tempoLimite) break;
 
+        std::uniform_int_distribution<> betaDist(bMinAtual, bMaxAtual);
         int beta = betaDist(gen);
         ResultadoPerturbacao perturbada = perturbar(s, instance, beta, pesosOperadores, gen);
         Solution candidata = VND(std::move(perturbada.solucao), instance, gen);
@@ -304,8 +324,16 @@ Solution ILS(
 
         if (melhorouBest) {
             iterSemMelhora = 0;
+            bMinAtual = baseBmin;
+            bMaxAtual = baseBmax;
         } else {
             iterSemMelhora++;
+            if (iterSemMelhora % std::max(5, iterSemMelhoraMax / 4) == 0) {
+                bMaxAtual = std::min(BmaxStuck, bMaxAtual + 1);
+                if (bMaxAtual > baseBmax + 1) {
+                    bMinAtual = std::min(bMaxAtual, bMinAtual + 1);
+                }
+            }
         }
 
         agora = std::chrono::steady_clock::now();
@@ -327,6 +355,8 @@ Solution ILS(
 
             temperatura = temperaturaInicial;
             iterSemMelhora = 0;
+            bMinAtual = baseBmin;
+            bMaxAtual = baseBmax;
         }
 
         iteracao++;
