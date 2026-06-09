@@ -34,6 +34,7 @@ add_executable(cvrp
     src/metaheuristicas/vns.cpp
     src/metaheuristicas/ils.cpp
     src/metaheuristicas/grasp.cpp
+    src/metaheuristicas/lns.cpp
 )
 
 target_include_directories(cvrp PRIVATE include)

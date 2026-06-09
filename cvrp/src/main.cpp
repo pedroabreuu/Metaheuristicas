@@ -16,6 +16,7 @@
 #include "metaheuristicas/vns.h"
 #include "metaheuristicas/grasp.h"
 #include "metaheuristicas/ils.h"
+#include "metaheuristicas/lns.h"
 
 int main(int argc, char* argv[]) {
     std::string filepath = (argc > 1) ? argv[1] : "data/A-n32-k5.vrp";
@@ -125,9 +126,9 @@ int main(int argc, char* argv[]) {
         // std::cout << "Probabilidade de selecionar elites: ";
         // std::cin >> probElite;
 
-        Solution solucaoBRKGA = BRKGA(instance, 2500, 100, 10, 0.10, 0.70);
+        // Solution solucaoBRKGA = BRKGA(instance, 2500, 100, 10, 0.10, 0.70);
 
-        solucaoBRKGA.imprime(instance);
+        // solucaoBRKGA.imprime(instance);
 
         // std::cout << "========VNS========" << "\n";
         // Solution solucaoVNS = VNS(solucaoSWAP, instance, 18, 200.0, 200.0, 0.999, 200);
@@ -140,6 +141,11 @@ int main(int argc, char* argv[]) {
         // std::cout << "========ILS========" << "\n";
         // Solution solucaoVNS = ILS(instance, 180.0, 150, 1, 3, 8);
         // solucaoVNS.imprime(instance);
+
+        std::cout << "========LNS========" << "\n";
+        Solution solucaoLNS = LNS(instance, 720.0, 1000, 0.1, 0.5, 150.0, 0.995);
+        solucaoLNS.imprime(instance);
+        
     }
     catch (const std::exception& e) {
         std::cerr << "Erro: " << e.what() << "\n";
