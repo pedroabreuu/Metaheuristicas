@@ -5,11 +5,9 @@
 
 Solution relocate(Solution solucao, const VRPInstance& instance) {
   const Node& depot = instance.getDepot();
-  const auto& nodes = instance.nodes;
-  const auto& mapa = instance.mapa;
 
   auto nodeById = [&](int id) -> const Node& {
-    return nodes[mapa.at(id)];
+    return instance.getNode(id);
   };
 
   std::vector<int> cargaRotas(solucao.rotas.size(), 0);
@@ -110,32 +108,49 @@ Solution randomRelocate(Solution solucao, const VRPInstance& instance) {
     return solucao;
   }
 
+  std::vector<int> cargaRotas(solucao.rotas.size(), 0);
+  for (size_t r = 0; r < solucao.rotas.size(); r++) {
+    for (int id : solucao.rotas[r]) {
+      cargaRotas[r] += instance.getNode(id).demanda;
+    }
+  }
+
   std::uniform_int_distribution<> rotaOrigem(0, static_cast<int>(solucao.rotas.size()) - 1);
-  int origem = rotaOrigem(gen);
 
-  if (solucao.rotas[origem].empty()) {
+  for (int tentativa = 0; tentativa < 80; tentativa++) {
+    int origem = rotaOrigem(gen);
+
+    if (solucao.rotas[origem].empty()) {
+      continue;
+    }
+
+    std::uniform_int_distribution<> rotaDestino(0, static_cast<int>(solucao.rotas.size()) - 2);
+    int destino = rotaDestino(gen);
+
+    if (destino >= origem) {
+      destino += 1;
+    }
+
+    std::uniform_int_distribution<> rotaCliente(0, static_cast<int>(solucao.rotas[origem].size()) - 1);
+    std::uniform_int_distribution<> posInsercao(0, static_cast<int>(solucao.rotas[destino].size()));
+
+    int cliente = rotaCliente(gen);
+    int insercao = posInsercao(gen);
+    int clienteId = solucao.rotas[origem][cliente];
+    int demandaCliente = instance.getNode(clienteId).demanda;
+
+    if (cargaRotas[destino] + demandaCliente > instance.capacity) {
+      continue;
+    }
+
+    solucao.rotas[origem].erase(solucao.rotas[origem].begin() + cliente);
+    solucao.rotas[destino].insert(solucao.rotas[destino].begin() + insercao, clienteId);
+
+    if (solucao.rotas[origem].empty()) {
+      solucao.rotas.erase(solucao.rotas.begin() + origem);
+    }
+
     return solucao;
-  }
-
-  std::uniform_int_distribution<> rotaDestino(0, static_cast<int>(solucao.rotas.size()) - 2);
-  int destino = rotaDestino(gen);
-
-  if (destino >= origem) {
-    destino += 1;
-  }
-
-  std::uniform_int_distribution<> rotaCliente(0, static_cast<int>(solucao.rotas[origem].size()) - 1);
-  std::uniform_int_distribution<> posInsercao(0, static_cast<int>(solucao.rotas[destino].size()));
-
-  int cliente = rotaCliente(gen);
-  int insercao = posInsercao(gen);
-  int clienteId = solucao.rotas[origem][cliente];
-
-  solucao.rotas[origem].erase(solucao.rotas[origem].begin() + cliente);
-  solucao.rotas[destino].insert(solucao.rotas[destino].begin() + insercao, clienteId);
-
-  if (solucao.rotas[origem].empty()) {
-    solucao.rotas.erase(solucao.rotas.begin() + origem);
   }
 
   return solucao;

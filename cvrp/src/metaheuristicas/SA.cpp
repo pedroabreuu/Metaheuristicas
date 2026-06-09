@@ -1,244 +1,210 @@
-#include <random>
-#include <iostream>
-#include <cmath>
+#include <algorithm>
 #include <chrono>
+#include <cmath>
+#include <iostream>
+#include <random>
+#include <utility>
+#include <vector>
 #include "metaheuristicas/SA.h"
 #include "neighborhoods/relocate.h"
 #include "neighborhoods/2opt.h"
+#include "neighborhoods/2optStar.h"
+#include "neighborhoods/orOpt.h"
 #include "neighborhoods/swap.h"
 #include "neighborhoods/crossE.h"
 
-Solution SimulatedAnnealing(Solution solucao, const VRPInstance& instance, double To, int SAmax, double alpha) {
+using NeighborhoodFunc = Solution (*)(Solution, const VRPInstance&);
+
+static void limpaRotasVazias(Solution& solucao) {
+    solucao.rotas.erase(
+        std::remove_if(solucao.rotas.begin(), solucao.rotas.end(),
+            [](const std::vector<int>& rota) { return rota.empty(); }),
+        solucao.rotas.end());
+}
+
+static Solution buscaLocalCompleta(Solution solucao, const VRPInstance& instance) {
+    std::vector<NeighborhoodFunc> vizinhancas = {
+        opt2,
+        relocate,
+        orOptIntra3,
+        orOptInter3,
+        swapIntra,
+        swapInter,
+        crossExchange,
+        opt2Star
+    };
+
+    solucao.calculaCusto(instance);
+    int k = 0;
+    while (k < static_cast<int>(vizinhancas.size())) {
+        limpaRotasVazias(solucao);
+        Solution candidata = vizinhancas[k](solucao, instance);
+        limpaRotasVazias(candidata);
+        candidata.calculaCusto(instance);
+        if (candidata.custoTotal < solucao.custoTotal) {
+            solucao = std::move(candidata);
+            k = 0;
+        } else {
+            k++;
+        }
+    }
+
+    return solucao;
+}
+
+static Solution movimentoAleatorio(Solution solucao, const VRPInstance& instance, int movimento) {
+    switch (movimento) {
+        case 0: return randomRelocate(std::move(solucao), instance);
+        case 1: return randomOpt2(std::move(solucao), instance);
+        case 2: return randomCrossExchange(std::move(solucao), instance);
+        case 3: return randomSwapIntra(std::move(solucao), instance);
+        case 4: return randomSwapInter(std::move(solucao), instance);
+        case 5: return randomOrOptInter(std::move(solucao), instance, 3);
+        default: return randomOpt2Star(std::move(solucao), instance);
+    }
+}
+
+static double estimaTemperaturaInicial(const Solution& inicial, const VRPInstance& instance, std::mt19937& gen) {
+    Solution base = inicial;
+    base.calculaCusto(instance);
+    std::vector<double> deltas;
+    deltas.reserve(200);
+
+    std::uniform_int_distribution<int> movDist(0, 6);
+    for (int i = 0; i < 250; i++) {
+        Solution candidata = movimentoAleatorio(base, instance, movDist(gen));
+        candidata.calculaCusto(instance);
+        double delta = static_cast<double>(candidata.custoTotal - base.custoTotal);
+        if (delta > 0.0) deltas.push_back(delta);
+    }
+
+    if (deltas.empty()) {
+        return std::max(1.0, 0.05 * static_cast<double>(base.custoTotal));
+    }
+
+    double media = 0.0;
+    for (double d : deltas) media += d;
+    media /= static_cast<double>(deltas.size());
+    return std::max(1.0, -media / std::log(0.80));
+}
+
+Solution SimulatedAnnealing(Solution solucao, const VRPInstance& instance, double tempoLimiteSegundos, int SAmax, double alpha) {
     auto inicio = std::chrono::steady_clock::now();
-    int maxMelhoraTemp = 100;
     auto tempoBest = inicio;
-    int iterT = 0;
-    double Temp = To;
-    double delta = 0.0;
-    bool achouOtimo = false;
-    
-    Solution best = solucao;
-    Solution corrente = solucao;
-    Solution sl;
-    
-    best.calculaCusto(instance);
-    corrente.calculaCusto(instance);
-    
+
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<double> realdist(0.0, 1.0);
+    std::uniform_int_distribution<int> movDist(0, 6);
 
-    double pesoRelocate = 1.0;
-    double peso2Opt = 1.0;
-    double pesoCross = 1.0;
+    Solution corrente = buscaLocalCompleta(std::move(solucao), instance);
+    corrente.calculaCusto(instance);
+    Solution best = corrente;
 
-    int semMelhoraBest = 0;
-    int semMelhoraTemp = 0;
-    const int limiteSemMelhoraBest = std::max(50, SAmax / 2);
-    const int limiteSemMelhoraTemp = 8;
+    double tempInicial = estimaTemperaturaInicial(corrente, instance, gen);
+    double tempMin = std::max(0.01, tempInicial * 0.001);
+    double temp = tempInicial;
 
-    auto intensificaParcial = [&](Solution s) {
-        int escolha = std::uniform_int_distribution<>(0, 1)(gen);
-        if (escolha == 0) {
-            s = opt2(s, instance);
-        } else {
-            s = relocate(s, instance);
-        }
-        s.calculaCusto(instance);
-        return s;
-    };
+    std::vector<double> pesos(7, 1.0);
+    int iterSemMelhora = 0;
+    int iteracao = 0;
 
-    auto intensificaForte = [&](Solution s) {
-        bool melhorou = true;
-        int passos = 0;
-        const int maxPassos = 2;
+    std::cout << "SA inicio | Custo: " << best.custoTotal
+              << " | Tempo limite: " << tempoLimiteSegundos
+              << "s | Temp inicial estimada: " << tempInicial << std::endl;
 
-        while (melhorou && passos < maxPassos) {
-            melhorou = false;
+    if (instance.optimal_value > 0 && best.custoTotal == instance.optimal_value) {
+        std::cout << "SA: Otimo encontrado em 0s" << std::endl;
+        return best;
+    }
 
-            Solution s1 = opt2(s, instance);
-            if (s1.custoTotal < s.custoTotal) {
-                s = s1;
-                melhorou = true;
-            }
+    while (true) {
+        auto agora = std::chrono::steady_clock::now();
+        double tempoDecorrido = std::chrono::duration<double>(agora - inicio).count();
+        if (tempoDecorrido >= tempoLimiteSegundos) break;
 
-            Solution s2 = relocate(s, instance);
-            if (s2.custoTotal < s.custoTotal) {
-                s = s2;
-                melhorou = true;
-            }
-
-            Solution s3 = swapIntra(s, instance);
-            if (s3.custoTotal < s.custoTotal) {
-                s = s3;
-                melhorou = true;
-            }
-
-            Solution s4 = crossExchange(s, instance);
-            if (s4.custoTotal < s.custoTotal) {
-                s = s4;
-                melhorou = true;
-            }
-
-            passos++;
-        }
-
-        s.calculaCusto(instance);
-        return s;
-    };
-
-    auto escolheMovimento = [&]() {
-        double somaPesos = pesoRelocate + peso2Opt + pesoCross;
-        double r = realdist(gen) * somaPesos;
-
-        if (r < pesoRelocate) return 0;
-        if (r < pesoRelocate + peso2Opt) return 1;
-        return 2;
-    };
-
-    while (Temp > 0.0001 && !achouOtimo) {
-        iterT = 0;
+        int aceitos = 0;
+        int testados = 0;
         bool melhorouNaTemperatura = false;
 
-        while (iterT < SAmax && !achouOtimo) {
-            int movimentoAle = escolheMovimento();
-            
-            if (movimentoAle == 0) {
-                sl = randomRelocate(corrente, instance);
-            } else if (movimentoAle == 1) {
-                sl = randomOpt2(corrente, instance);
-            } else {
-                sl = randomCrossExchange(corrente, instance);
-            }
-            
-            sl.calculaCusto(instance);
-            delta = sl.custoTotal - corrente.custoTotal;
-            
+        for (int i = 0; i < SAmax; i++) {
+            agora = std::chrono::steady_clock::now();
+            tempoDecorrido = std::chrono::duration<double>(agora - inicio).count();
+            if (tempoDecorrido >= tempoLimiteSegundos) break;
+
+            std::discrete_distribution<int> escolhaMovimento(pesos.begin(), pesos.end());
+            int movimento = escolhaMovimento(gen);
+            Solution candidata = movimentoAleatorio(corrente, instance, movimento);
+            limpaRotasVazias(candidata);
+            candidata.calculaCusto(instance);
+
+            int delta = candidata.custoTotal - corrente.custoTotal;
+            testados++;
             if (delta <= 0) {
-                corrente = sl;
-
-                Solution correnteIntensificada = intensificaParcial(corrente);
-                if (correnteIntensificada.custoTotal < corrente.custoTotal) {
-                    corrente = correnteIntensificada;
+                Solution polida = buscaLocalCompleta(candidata, instance);
+                if (polida.custoTotal < candidata.custoTotal) {
+                    candidata = std::move(polida);
+                    delta = candidata.custoTotal - corrente.custoTotal;
                 }
+            }
 
-                if (movimentoAle == 0) pesoRelocate += 0.15;
-                else if (movimentoAle == 1) peso2Opt += 0.15;
-                else pesoCross += 0.15;
+            if (delta <= 0 || realdist(gen) < std::exp(-static_cast<double>(delta) / temp)) {
+                corrente = std::move(candidata);
+                aceitos++;
+                pesos[static_cast<size_t>(movimento)] += (delta <= 0) ? 0.08 : 0.02;
 
                 if (corrente.custoTotal < best.custoTotal) {
-                    best = corrente;
+                    if (corrente.custoTotal < best.custoTotal) {
+                        best = corrente;
+                        tempoBest = std::chrono::steady_clock::now();
+                        melhorouNaTemperatura = true;
+                        iterSemMelhora = 0;
 
-                    // itensificacao forte quando melhora best
-                    best = intensificaForte(best);
+                        std::cout << "SA iter " << iteracao
+                                  << " | Melhor: " << best.custoTotal
+                                  << " em "
+                                  << std::chrono::duration<double>(tempoBest - inicio).count()
+                                  << "s" << std::endl;
 
-                    if (best.custoTotal < corrente.custoTotal) {
-                        corrente = best;
+                        if (instance.optimal_value > 0 && best.custoTotal == instance.optimal_value) {
+                            std::cout << "SA: Otimo encontrado em "
+                                      << std::chrono::duration<double>(tempoBest - inicio).count()
+                                      << "s" << std::endl;
+                            return best;
+                        }
                     }
-
-                    tempoBest = std::chrono::steady_clock::now();
-                    melhorouNaTemperatura = true;
-                    semMelhoraBest = 0;
-
-                    if (movimentoAle == 0) pesoRelocate += 0.35;
-                    else if (movimentoAle == 1) peso2Opt += 0.35;
-                    else pesoCross += 0.35;
-
-                    if (instance.optimal_value > 0 && best.custoTotal == instance.optimal_value) {
-                        achouOtimo = true;
-                    }
-                } else {
-                    semMelhoraBest++;
                 }
-
             } else {
-                double r = realdist(gen);
-                if (r < std::exp(-delta / Temp)) {
-                    corrente = sl;
-
-                    // recompensa se o movimento ao menos foi aceito
-                    if (movimentoAle == 0) pesoRelocate += 0.03;
-                    else if (movimentoAle == 1) peso2Opt += 0.03;
-                    else pesoCross += 0.03;
-                } else {
-                    // penaliza se o movimento foi rejeitado
-                    if (movimentoAle == 0) pesoRelocate = std::max(0.20, pesoRelocate - 0.02);
-                    else if (movimentoAle == 1) peso2Opt = std::max(0.20, peso2Opt - 0.02);
-                    else pesoCross = std::max(0.20, pesoCross - 0.02);
-
-                    semMelhoraBest++;
-                }
+                pesos[static_cast<size_t>(movimento)] = std::max(0.20, pesos[static_cast<size_t>(movimento)] - 0.01);
             }
-
-            // normalizar para evitar pesos com vlaores altos
-            double somaPesos = pesoRelocate + peso2Opt + pesoCross;
-            if (somaPesos > 30.0) {
-                pesoRelocate /= somaPesos;
-                peso2Opt /= somaPesos;
-                pesoCross /= somaPesos;
-
-                pesoRelocate *= 3.0;
-                peso2Opt *= 3.0;
-                pesoCross *= 3.0;
-            }
-            
-            // controle de estagnacao
-            if (semMelhoraBest >= limiteSemMelhoraBest) {
-                corrente = best;
-                corrente = intensificaParcial(corrente);
-                semMelhoraBest = 0;
-            }
-            
-            iterT++;
+            iteracao++;
         }
 
-        if (melhorouNaTemperatura) {
-            semMelhoraTemp = 0;
-        } else {
-            semMelhoraTemp++;
-        }
+        if (!melhorouNaTemperatura) iterSemMelhora++;
 
-        if (semMelhoraTemp >= limiteSemMelhoraTemp && maxMelhoraTemp > 0) {
-            Temp = std::max(Temp, To * 0.05);
+        double taxaAceitacao = (testados > 0) ? static_cast<double>(aceitos) / static_cast<double>(testados) : 0.0;
+        if (iterSemMelhora >= 6 || taxaAceitacao < 0.02) {
+            temp = std::max(temp, tempInicial * 0.25);
             corrente = best;
-            corrente = intensificaParcial(corrente);
-            semMelhoraTemp = 0;
-            maxMelhoraTemp--;
+            corrente = movimentoAleatorio(std::move(corrente), instance, movDist(gen));
+            corrente = movimentoAleatorio(std::move(corrente), instance, movDist(gen));
+            corrente.calculaCusto(instance);
+            iterSemMelhora = 0;
+        } else {
+            temp = std::max(tempMin, temp * alpha);
         }
 
-        if (maxMelhoraTemp <= 0) {
-            corrente = randomOpt2(corrente, instance);
-            corrente = randomRelocate(corrente, instance);
-            corrente = randomCrossExchange(corrente, instance);
+        double somaPesos = 0.0;
+        for (double peso : pesos) somaPesos += peso;
+        if (somaPesos > 40.0) {
+            for (double& peso : pesos) peso = std::max(0.20, peso / somaPesos * static_cast<double>(pesos.size()));
         }
-
-        Temp *= alpha;
-        std::cout << "Temp=" << Temp << " corrente=" << corrente.custoTotal << " best=" << best.custoTotal << std::endl;
     }
 
-    bool melhorou = true;
-    while (melhorou) {
-        melhorou = false;
-
-        Solution s1 = opt2(best, instance);
-        if (s1.custoTotal < best.custoTotal) { best = s1; melhorou = true; continue; }
-
-        Solution s2 = relocate(best, instance);
-        if (s2.custoTotal < best.custoTotal) { best = s2; melhorou = true; continue; }
-
-        Solution s3 = swapIntra(best, instance);
-        if (s3.custoTotal < best.custoTotal) { best = s3; melhorou = true; continue; }
-
-        Solution s4 = crossExchange(best, instance);
-        if (s4.custoTotal < best.custoTotal) { best = s4; melhorou = true; continue; }
-
-        Solution s5 = swapIntra(best, instance);
-        if (s5.custoTotal < best.custoTotal) { best = s5; melhorou = true; continue; }
-    }
+    best = buscaLocalCompleta(best, instance);
 
     auto fim = std::chrono::steady_clock::now();
     double tempoTotal = std::chrono::duration<double>(fim - inicio).count();
-
     double tempoMelhor = std::chrono::duration<double>(tempoBest - inicio).count();
 
     if (instance.optimal_value > 0 && best.custoTotal == instance.optimal_value)

@@ -4,8 +4,11 @@
 #include <cmath>
 #include <algorithm>
 #include <iostream>
+#include <utility>
 #include "metaheuristicas/vns.h"
 #include "neighborhoods/2opt.h"
+#include "neighborhoods/2optStar.h"
+#include "neighborhoods/orOpt.h"
 #include "neighborhoods/relocate.h"
 #include "neighborhoods/swap.h"
 #include "neighborhoods/crossE.h"
@@ -20,8 +23,19 @@ static void limpaRotasVazias(Solution& solucao) {
 }
 
 Solution VND(Solution solucao, const VRPInstance& instance) {
+    static std::mt19937 gen(std::random_device{}());
     limpaRotasVazias(solucao);
-    std::vector<NeighborhoodFunc> vizinhancas = {opt2, relocate, swapIntra, crossExchange, swapIntra, opt2, relocate, swapIntra};
+    std::vector<NeighborhoodFunc> vizinhancas = {
+        opt2,
+        relocate,
+        orOptIntra3,
+        orOptInter3,
+        swapIntra,
+        swapInter,
+        crossExchange,
+        opt2Star
+    };
+    std::shuffle(vizinhancas.begin(), vizinhancas.end(), gen);
 
     solucao.calculaCusto(instance);
     int k = 0;
@@ -35,6 +49,7 @@ Solution VND(Solution solucao, const VRPInstance& instance) {
         if (candidata.custoTotal < solucao.custoTotal) {
             solucao = candidata;
             k = 0;
+            std::shuffle(vizinhancas.begin(), vizinhancas.end(), gen);
         } else {
             k++;
         }
@@ -44,13 +59,21 @@ Solution VND(Solution solucao, const VRPInstance& instance) {
 }
 
 Solution perturbar(Solution solucao, const VRPInstance& instance, int k) {
-    std::vector<NeighborhoodFunc> perturbacoes = {randomRelocate, randomOpt2, randomCrossExchange};
+    std::vector<NeighborhoodFunc> perturbacoes = {
+        randomRelocate,
+        randomOpt2,
+        randomCrossExchange,
+        randomSwapInter,
+        randomSwapIntra,
+        randomOrOptInter3,
+        randomOpt2Star
+    };
     static std::mt19937 gen(std::random_device{}());
-    std::uniform_int_distribution<> perturbacao(0, perturbacoes.size() - 1);
+    std::uniform_int_distribution<> perturbacao(0, static_cast<int>(perturbacoes.size()) - 1);
 
     for (int i = 0; i < k; i++) {
         int indicePerturbacao = perturbacao(gen);
-        solucao = perturbacoes[indicePerturbacao](solucao, instance);
+        solucao = perturbacoes[indicePerturbacao](std::move(solucao), instance);
         limpaRotasVazias(solucao);
     }
 
@@ -118,7 +141,7 @@ Solution VNS(Solution solucao, const VRPInstance& instance, int kMax, double tem
         temperatura *= alpha;
 
         if (iterSemMelhora >= iterSemMelhoraMax) {
-            if (dist(gen) < 0.5) {
+            if (dist(gen) < 0.3) {
                 solucao = best;
             } else {
                 solucao = perturbar(best, instance, kMax * 2);

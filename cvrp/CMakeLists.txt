@@ -26,11 +26,15 @@ add_executable(cvrp
     src/neighborhoods/relocate.cpp
     src/neighborhoods/swap.cpp
     src/neighborhoods/crossE.cpp
+    src/neighborhoods/orOpt.cpp
+    src/neighborhoods/2optStar.cpp
     src/metaheuristicas/SA.cpp
     src/metaheuristicas/ga.cpp
     src/metaheuristicas/BRKGA.cpp
     src/metaheuristicas/vns.cpp
+    src/metaheuristicas/ils.cpp
     src/metaheuristicas/grasp.cpp
+    src/metaheuristicas/lns.cpp
 )
 
 target_include_directories(cvrp PRIVATE include)

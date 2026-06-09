@@ -5,3 +5,5 @@
 
 Solution swapIntra(Solution solucao, const VRPInstance& instance);
 Solution swapInter(Solution solucao, const VRPInstance& instance);
+Solution randomSwapIntra(Solution solucao, const VRPInstance& instance);
+Solution randomSwapInter(Solution solucao, const VRPInstance& instance);

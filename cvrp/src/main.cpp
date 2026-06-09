@@ -1,9 +1,12 @@
 #include <iostream>
 #include <chrono>
+#include <iomanip>
 #include "utils/parser.h"
 #include "utils/nearestNeighbor.h"
 #include "utils/CWSavings.h"
 #include "neighborhoods/2opt.h"
+#include "neighborhoods/2optStar.h"
+#include "neighborhoods/orOpt.h"
 #include "neighborhoods/relocate.h"
 #include "neighborhoods/swap.h"
 #include "neighborhoods/crossE.h"
@@ -12,6 +15,8 @@
 #include "metaheuristicas/BRKGA.h"
 #include "metaheuristicas/vns.h"
 #include "metaheuristicas/grasp.h"
+#include "metaheuristicas/ils.h"
+#include "metaheuristicas/lns.h"
 
 int main(int argc, char* argv[]) {
     std::string filepath = (argc > 1) ? argv[1] : "data/A-n32-k5.vrp";
@@ -27,47 +32,51 @@ int main(int argc, char* argv[]) {
 
         // auto t0 = std::chrono::steady_clock::now();
 
-        // Solution solucaoNN = nearestN(instance);
-        // solucaoNN.calculaCusto(instance);
-        // std::cout << "========Nearest Neighbor========" << "\n";
-        // solucaoNN.imprime(instance);
+        // // Solution solucaoNN = nearestN(instance);
+        // // solucaoNN.calculaCusto(instance);
+        // // std::cout << "========Nearest Neighbor========" << "\n";
+        // // solucaoNN.imprime(instance);
 
-        Solution solucaoCW = clarkeWright(instance);
-        solucaoCW.calculaCusto(instance);
-        // std::cout << "========Clarke-Wright========" << "\n";
-        // solucaoCW.imprime(instance);
+        // Solution solucaoCW = clarkeWright(instance);
+        // solucaoCW.calculaCusto(instance);
 
-        Solution solucao2opt = opt2(solucaoCW, instance);
-        solucao2opt.calculaCusto(instance);
-        // std::cout << "========2-opt========" << "\n";
-        // solucao2opt.imprime(instance);
+        // std::vector<Solution (*)(Solution, const VRPInstance&)> buscasLocais = {
+        //     crossExchange,
+        //     opt2,
+        //     relocate,
+        //     orOptIntra3,
+        //     opt2Star,
+        //     orOptInter3,
+        //     swapIntra,
+        //     swapInter,
+        //     crossExchange,
+        //     opt2Star
+        // };
 
-        Solution solucaoRelocate = relocate(solucao2opt, instance);
-        solucaoRelocate.calculaCusto(instance);
-        // std::cout << "========Relocate========" << "\n";
-        // solucaoRelocate.imprime(instance);
+        // Solution solucaoFinal = solucaoCW;
+        // int k = 0;
+        // while (k < static_cast<int>(buscasLocais.size())) {
+        //     Solution candidata = buscasLocais[k](solucaoFinal, instance);
+        //     candidata.calculaCusto(instance);
 
-        Solution solucaoSWAP = swapIntra(solucaoRelocate, instance);
-        solucaoSWAP.calculaCusto(instance);
-        // std::cout << "========Swap Intra========" << "\n";
-        // solucaoSWAP.imprime(instance);
-
-        Solution solucaoCE = crossExchange(solucaoSWAP, instance);
-        solucaoCE.calculaCusto(instance);
-        // std::cout << "========Cross-Exchange========" << "\n";
-        // solucaoCE.imprime(instance);
-
-        solucaoSWAP = swapIntra(solucaoCE, instance);
-        solucaoSWAP.calculaCusto(instance);
-        // std::cout << "========Swap Intra 2========" << "\n";
-        // solucaoSWAP.imprime(instance);
+        //     if (candidata.custoTotal < solucaoFinal.custoTotal) {
+        //         solucaoFinal = candidata;
+        //         k = 0;
+        //     } else {
+        //         k++;
+        //     }
+        // }
 
         // auto t1 = std::chrono::steady_clock::now();
         // double tempoCW = std::chrono::duration<double>(t1 - t0).count();
-        // std::cout << "CW+2opt+Relocate+Swap+CrossExchange: "
-        //           << solucaoSWAP.custoTotal << " em " << tempoCW << "s" << std::endl;
 
-        // Solution solucaoSA = SimulatedAnnealing(solucaoCW, instance, 1000.0, 2000, 0.9995);
+        // std::cout << "========Clarke-Wright + VND========" << "\n";
+        // std::cout << "Custo inicial CW: " << solucaoCW.custoTotal << "\n";
+        // std::cout << "Custo final: " << solucaoFinal.custoTotal
+        //           << " em " << tempoCW << "s" << std::endl;
+        // solucaoFinal.imprime(instance);
+
+        // Solution solucaoSA = SimulatedAnnealing(solucaoFinal, instance, 300.0, 2000, 0.9995);
         // solucaoSA.calculaCusto(instance);
         // std::cout << "========Simulated Annealing========" << "\n";
         // solucaoSA.imprime(instance);
@@ -94,8 +103,8 @@ int main(int argc, char* argv[]) {
         // std::cout << "Probabilidade de crossover (0.0 a 1.0): ";
         // std::cin >> probCrossover;
          
-        // Solution solucaoGA = GeneticAlgorithm(instance, 5000, 150,
-        //                                        3, 2, 0.2, 0.75);
+        // Solution solucaoGA = GeneticAlgorithm(instance, 5000, 120,
+        //                                        3, 2, 0.15, 0.8);
         // solucaoGA.imprime(instance);
 
         // std::cout << "========BRKGA========" << "\n";
@@ -117,18 +126,26 @@ int main(int argc, char* argv[]) {
         // std::cout << "Probabilidade de selecionar elites: ";
         // std::cin >> probElite;
 
-        // Solution solucaoBRKGA = BRKGA(instance, 4000, 120,
-        //                                        5, 0.1, 0.7);
+        // Solution solucaoBRKGA = BRKGA(instance, 2500, 100, 10, 0.10, 0.70);
 
         // solucaoBRKGA.imprime(instance);
 
-        std::cout << "========VNS========" << "\n";
-        Solution solucaoVNS = VNS(solucaoSWAP, instance, 15, 1800.0, 200.0, 0.9995, 200);
-        solucaoVNS.imprime(instance);
+        // std::cout << "========VNS========" << "\n";
+        // Solution solucaoVNS = VNS(solucaoSWAP, instance, 18, 200.0, 200.0, 0.999, 200);
+        // solucaoVNS.imprime(instance);
 
         // std::cout << "========GRASP========" << "\n";
         // Solution solucaoGRASP = GRASP(instance, 900.0);
         // solucaoGRASP.imprime(instance);
+
+        // std::cout << "========ILS========" << "\n";
+        // Solution solucaoVNS = ILS(instance, 180.0, 150, 1, 3, 8);
+        // solucaoVNS.imprime(instance);
+
+        std::cout << "========LNS========" << "\n";
+        Solution solucaoLNS = LNS(instance, 720.0, 1000, 0.1, 0.5, 150.0, 0.995);
+        solucaoLNS.imprime(instance);
+        
     }
     catch (const std::exception& e) {
         std::cerr << "Erro: " << e.what() << "\n";
