@@ -7,17 +7,20 @@ BIN="./build/cvrp"
 TIMEOUT=0
 OUTPUT_DIR="results"
 GROUP=""
+ALGO=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --group)     GROUP="$2";     shift 2 ;;
+        --algo)      ALGO="$2";      shift 2 ;;
         --data-dir)  DATA_DIR="$2";  shift 2 ;;
         --bin)       BIN="$2";       shift 2 ;;
         --timeout)   TIMEOUT="$2";   shift 2 ;;
         --help|-h)
-            echo "Uso: $0 --group <LETRA> [--data-dir DIR] [--bin BIN] [--timeout SEG]"
-            echo "Exemplo: $0 --group A"
-            echo "Exemplo: $0 --group B --timeout 120"
+            echo "Uso: $0 --group <LETRA> --algo <ALGO> [--data-dir DIR] [--bin BIN] [--timeout SEG]"
+            echo "Algoritmos: sa, ga, brkga, vns, grasp, ils, lns, aco"
+            echo "Exemplo: $0 --group A --algo lns"
+            echo "Exemplo: $0 --group B --algo sa --timeout 120"
             exit 0 ;;
         *) echo "Opção desconhecida: $1"; exit 1 ;;
     esac
@@ -25,6 +28,12 @@ done
 
 if [[ -z "$GROUP" ]]; then
     echo "[ERRO] Informe o grupo com --group <LETRA>  (ex: --group A)"
+    exit 1
+fi
+
+if [[ -z "$ALGO" ]]; then
+    echo "[ERRO] Informe o algoritmo com --algo <ALGO>  (ex: --algo lns)"
+    echo "       Algoritmos: sa, ga, brkga, vns, grasp, ils, lns, aco"
     exit 1
 fi
 
@@ -45,7 +54,7 @@ if [[ ! -d "$SEARCH_DIR" ]]; then
     exit 1
 fi
 
-GROUP_OUTPUT="${OUTPUT_DIR}/${GROUP}"
+GROUP_OUTPUT="${OUTPUT_DIR}/${ALGO}/${GROUP}"
 mkdir -p "$GROUP_OUTPUT"
 LOG_FILE="${GROUP_OUTPUT}/summary.csv"
 
@@ -57,6 +66,7 @@ total=0; ok=0; failed=0; timed_out=0
 
 echo "============================================================"
 echo " Grupo    : $GROUP"
+echo " Algoritmo: $ALGO"
 echo " Dados    : $SEARCH_DIR"
 echo " Binário  : $BIN"
 echo " Timeout  : ${TIMEOUT}s (0 = sem limite)"
@@ -76,10 +86,10 @@ for vrp_file in "$SEARCH_DIR"/${GROUP}-*.vrp; do
 
     if [[ "$TIMEOUT" -gt 0 ]]; then
         exit_code=0
-        timeout "$TIMEOUT" "$BIN" "$vrp_file" > "$out_file" 2>&1 || exit_code=$?
+        timeout "$TIMEOUT" "$BIN" "$vrp_file" "$ALGO" > "$out_file" 2>&1 || exit_code=$?
     else
         exit_code=0
-        "$BIN" "$vrp_file" > "$out_file" 2>&1 || exit_code=$?
+        "$BIN" "$vrp_file" "$ALGO" > "$out_file" 2>&1 || exit_code=$?
     fi
 
     t_end=$(date +%s%N)
