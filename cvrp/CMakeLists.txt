@@ -22,6 +22,7 @@ add_executable(cvrp
     src/utils/parser.cpp
     src/utils/nearestNeighbor.cpp
     src/utils/CWSavings.cpp
+    src/utils/rkDecoder.cpp
     src/neighborhoods/2opt.cpp
     src/neighborhoods/relocate.cpp
     src/neighborhoods/swap.cpp
@@ -35,6 +36,7 @@ add_executable(cvrp
     src/metaheuristicas/ils.cpp
     src/metaheuristicas/grasp.cpp
     src/metaheuristicas/lns.cpp
+    src/metaheuristicas/pso.cpp
 )
 
 target_include_directories(cvrp PRIVATE include)

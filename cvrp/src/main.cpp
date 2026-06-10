@@ -11,6 +11,7 @@
 #include "metaheuristicas/grasp.h"
 #include "metaheuristicas/ils.h"
 #include "metaheuristicas/lns.h"
+#include "metaheuristicas/pso.h"
 
 static Solution solucaoInicial(const VRPInstance& instance) {
     Solution s = clarkeWright(instance);
@@ -30,7 +31,10 @@ static const std::map<std::string, Algoritmo>& registro() {
             return GeneticAlgorithm(inst, 5000, 120, 3, 2, 0.15, 0.8);
         }},
         {"brkga", [](const VRPInstance& inst) {
-            return BRKGA(inst, 2500, 100, 10, 0.10, 0.70);
+            return BRKGA(inst, 2500, 100, 10, 0.10, 0.70, false);
+        }},
+        {"brkga-elite", [](const VRPInstance& inst) {
+            return BRKGA(inst, 2500, 100, 10, 0.10, 0.70, true);
         }},
         {"vns", [](const VRPInstance& inst) {
             return VNS(solucaoInicial(inst), inst, 18, 200.0, 200.0, 0.999, 200);
@@ -43,6 +47,12 @@ static const std::map<std::string, Algoritmo>& registro() {
         }},
         {"lns", [](const VRPInstance& inst) {
             return LNS(inst, 720.0, 1000, 0.1, 0.5, 150.0, 0.995);
+        }},
+        {"pso", [](const VRPInstance& inst) {
+            return PSO(inst, 300.0, 30, 0.73, 1.5, 1.5, 0.3, false); 
+        }},
+        {"pso-gbest", [](const VRPInstance& inst) {
+            return PSO(inst, 300.0, 30, 0.73, 1.5, 1.5, 0.3, true);
         }},
     };
     return algos;
