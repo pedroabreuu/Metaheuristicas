@@ -18,7 +18,7 @@ while [[ $# -gt 0 ]]; do
         --timeout)   TIMEOUT="$2";   shift 2 ;;
         --help|-h)
             echo "Uso: $0 --group <LETRA> --algo <ALGO> [--data-dir DIR] [--bin BIN] [--timeout SEG]"
-            echo "Algoritmos: sa, ga, brkga, vns, grasp, ils, lns, aco"
+            echo "Algoritmos: sa, ga, brkga, vns, grasp, ils, lns, pso"
             echo "Exemplo: $0 --group A --algo lns"
             echo "Exemplo: $0 --group B --algo sa --timeout 120"
             exit 0 ;;
@@ -33,7 +33,7 @@ fi
 
 if [[ -z "$ALGO" ]]; then
     echo "[ERRO] Informe o algoritmo com --algo <ALGO>  (ex: --algo lns)"
-    echo "       Algoritmos: sa, ga, brkga, vns, grasp, ils, lns, aco"
+    echo "       Algoritmos: sa, ga, brkga, vns, grasp, ils, lns, pso"
     exit 1
 fi
 
@@ -109,7 +109,7 @@ for vrp_file in "$SEARCH_DIR"/${GROUP}-*.vrp; do
         continue
     fi
 
-    otimo=$(grep -oP '(?<=Otimo conhecido: )\d+' "$out_file" || echo "N/A")
+    otimo=$(grep -oiP '(?<=otimo conhecido: )\d+' "$out_file" || echo "N/A")
     custo=$(grep -oP '(?<=Cost )\d+' "$out_file" | tail -1 || echo "N/A")
 
     if [[ "$custo" != "N/A" && "$otimo" != "N/A" && "$otimo" != "0" ]]; then
