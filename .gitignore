@@ -14,4 +14,4 @@ build/
 Thumbs.db
 compile_commands.json
 .cache/
-.log
+*.log
