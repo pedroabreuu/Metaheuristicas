@@ -1,3 +1,5 @@
+#include "utils/experimento.h"
+#include "utils/rng.h"
 #include <random>
 #include <iostream>
 #include <algorithm>
@@ -214,10 +216,9 @@ static bool muitoParecida(const Solution& a, const Solution& b) {
     return assinaturaSolucao(a) == assinaturaSolucao(b);
 }
 
-Solution GeneticAlgorithm(const VRPInstance& instance, int numGeracoes, int tamanhoPopulacao, int tamanhoTorneio, int elitismo, double probMutacao, double probCrossover) {
+Solution GeneticAlgorithm(const VRPInstance& instance, int numGeracoes, int tamanhoPopulacao, int tamanhoTorneio, int elitismo, double probMutacao, double probCrossover, double tempoLimite) {
 	std::vector<Solution> solucoes;
-	std::random_device rd;
-    std::mt19937 gen(rd());
+	    std::mt19937& gen = rngGlobal();
     std::uniform_real_distribution<> probDist(0.0, 1.0);
 
 	for (int i = 0; i < tamanhoPopulacao; i++) {
@@ -237,6 +238,7 @@ Solution GeneticAlgorithm(const VRPInstance& instance, int numGeracoes, int tama
         });
 
     Solution melhorSolucao = *melhorGlobal;
+    expRegistraMelhora(melhorSolucao.custoTotal);
 
     std::cout << "Geracao 0 (inicial) | Melhor custo: " << melhorSolucao.custoTotal << std::endl;
 
@@ -245,6 +247,10 @@ Solution GeneticAlgorithm(const VRPInstance& instance, int numGeracoes, int tama
     int geracoesSemMelhora = 0;
 
 	for (int i = 0; i < numGeracoes; i++) {
+		if (tempoLimite > 0.0 &&
+		    std::chrono::duration<double>(std::chrono::steady_clock::now() - inicio).count() >= tempoLimite) {
+			break;
+		}
 		std::nth_element(solucoes.begin(), solucoes.begin() + elitismo, solucoes.end(),
     		[](const Solution& a, const Solution& b) {
         		return a.custoTotal < b.custoTotal;
@@ -336,6 +342,7 @@ Solution GeneticAlgorithm(const VRPInstance& instance, int numGeracoes, int tama
 
         if (melhorAtual->custoTotal < melhorSolucao.custoTotal) {
             melhorSolucao = *melhorAtual;
+            expRegistraMelhora(melhorSolucao.custoTotal);
             tempoBest = std::chrono::steady_clock::now();
             geracoesSemMelhora = 0;
         } else {

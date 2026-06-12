@@ -1,3 +1,4 @@
+#include "utils/rng.h"
 #include <algorithm>
 #include <random>
 #include <vector>
@@ -164,7 +165,7 @@ Solution orOptInter3(Solution solucao, const VRPInstance& instance) {
 }
 
 Solution randomOrOptInter(Solution solucao, const VRPInstance& instance, int maxSegmento) {
-    static std::mt19937 gen(std::random_device{}());
+    std::mt19937& gen = rngGlobal();
     if (solucao.rotas.size() < 2) return solucao;
     maxSegmento = std::max(1, maxSegmento);
 

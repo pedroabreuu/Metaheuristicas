@@ -1,3 +1,5 @@
+#include "utils/experimento.h"
+#include "utils/rng.h"
 #include "metaheuristicas/lns.h"
 #include "metaheuristicas/vns.h"
 #include "core/Solution.h"
@@ -153,6 +155,7 @@ static Solution construirRegret2(const VRPInstance& instance, const Solution& so
 }
 
 static ResultadoDestruicao destruirAleatorio(const Solution& solucao, const VRPInstance& instance, double rhoMin, double rhoMax, std::mt19937& gen) {
+    (void)instance; 
     Solution copiaSolucao = solucao;
     ResultadoDestruicao resultado;
     std::vector<int> listaClientes;
@@ -248,7 +251,7 @@ static ResultadoDestruicao destruirPiorCusto(const Solution& solucao, const VRPI
 }
 
 Solution LNS(const VRPInstance& instance, double tempoLimite, int iterSemMelhoraMax, double rhoMin, double rhoMax, double tempInicial, double alpha) {
-    std::mt19937 gen(std::random_device{}());
+    std::mt19937& gen = rngGlobal();
     std::uniform_real_distribution<> dist(0.0, 1.0);
 
     std::vector<FuncDestruicao> operadoresDestruicao = { destruirAleatorio, destruirPiorCusto };
@@ -269,6 +272,7 @@ Solution LNS(const VRPInstance& instance, double tempoLimite, int iterSemMelhora
     Solution s = clarkeWright(instance);
     s.calculaCusto(instance);
     Solution best = s;
+    expRegistraMelhora(best.custoTotal);
 
     double temperatura = tempInicial;
     int iterSemMelhora = 0;
@@ -318,6 +322,7 @@ Solution LNS(const VRPInstance& instance, double tempoLimite, int iterSemMelhora
         if (candidato.custoTotal < best.custoTotal) {
             s = candidato;
             best = candidato;
+            expRegistraMelhora(best.custoTotal);
             iterSemMelhora = 0;
             pontuacaoRodada = 25.0; //testar mudar
             tempoBest = std::chrono::steady_clock::now();

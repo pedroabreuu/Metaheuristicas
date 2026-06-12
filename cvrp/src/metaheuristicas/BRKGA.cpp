@@ -1,3 +1,5 @@
+#include "utils/experimento.h"
+#include "utils/rng.h"
 #include <random>
 #include <iostream>
 #include <algorithm>
@@ -56,10 +58,9 @@ static void decodificaEAvalia(Cromossomo& c, const VRPInstance& instance, bool c
     c.fitness = c.solution.custoTotal;
 }
 
-Solution BRKGA(const VRPInstance& instance, int numGeracoes, int tamanhoPopulacao, int numElite, double mutantes, double probElite, bool lsApenasElite) {
+Solution BRKGA(const VRPInstance& instance, int numGeracoes, int tamanhoPopulacao, int numElite, double mutantes, double probElite, bool lsApenasElite, double tempoLimite) {
     std::vector<Cromossomo> cromossomos;
-    std::random_device rd;
-    std::mt19937 gen(rd());
+    std::mt19937& gen = rngGlobal();
     int numMutantes = static_cast<int>(mutantes * tamanhoPopulacao);
     int numFilhos = tamanhoPopulacao - numElite - numMutantes;
     std::uniform_int_distribution<> eliteAleatorio(0, numElite - 1);
@@ -94,11 +95,16 @@ Solution BRKGA(const VRPInstance& instance, int numGeracoes, int tamanhoPopulaca
             return a.fitness < b.fitness;
         });
     Cromossomo melhorCromossomo = *melhorGlobal;
+    expRegistraMelhora(melhorCromossomo.fitness);
 
     auto inicio = std::chrono::steady_clock::now();
     auto tempoBest = inicio;
 
     for (int i = 0; i < numGeracoes; i++) {
+        if (tempoLimite > 0.0 &&
+            std::chrono::duration<double>(std::chrono::steady_clock::now() - inicio).count() >= tempoLimite) {
+            break;
+        }
         std::nth_element(cromossomos.begin(), cromossomos.begin() + numElite, cromossomos.end(),
             [](const Cromossomo& a, const Cromossomo& b) {
                 return a.fitness < b.fitness;
@@ -132,6 +138,7 @@ Solution BRKGA(const VRPInstance& instance, int numGeracoes, int tamanhoPopulaca
 
         if (melhorAtual->fitness < melhorCromossomo.fitness) {
             melhorCromossomo = *melhorAtual;
+            expRegistraMelhora(melhorCromossomo.fitness);
             tempoBest = std::chrono::steady_clock::now();
         }
 

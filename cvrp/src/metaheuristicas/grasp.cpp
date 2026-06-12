@@ -1,3 +1,5 @@
+#include "utils/experimento.h"
+#include "utils/rng.h"
 #include <random>
 #include <iostream>
 #include <algorithm>
@@ -365,8 +367,7 @@ static Solution pathRelinking(const Solution& origem, const Solution& alvo, cons
 }
 
 Solution GRASP(const VRPInstance& instance, double tempoLimiteSegundos) {
-    std::random_device rd;
-    std::mt19937 gen(rd());
+    std::mt19937& gen = rngGlobal();
     std::uniform_real_distribution<double> distReal(0.0, 1.0);
 
     const double ALPHA_PERTURBADO = 0.55;
@@ -447,6 +448,7 @@ Solution GRASP(const VRPInstance& instance, double tempoLimiteSegundos) {
                 pesosAlpha[static_cast<size_t>(alphaRewardIndex)] += 2.0;
             }
             best = s;
+            expRegistraMelhora(best.getCusto());
             atual = s;
             atualizaElite(elite, best, MAX_ELITE);
             tempoBest = std::chrono::steady_clock::now();

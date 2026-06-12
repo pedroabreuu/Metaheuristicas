@@ -1,3 +1,5 @@
+#include "utils/experimento.h"
+#include "utils/rng.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -92,14 +94,14 @@ Solution SimulatedAnnealing(Solution solucao, const VRPInstance& instance, doubl
     auto inicio = std::chrono::steady_clock::now();
     auto tempoBest = inicio;
 
-    std::random_device rd;
-    std::mt19937 gen(rd());
+    std::mt19937& gen = rngGlobal();
     std::uniform_real_distribution<double> realdist(0.0, 1.0);
     std::uniform_int_distribution<int> movDist(0, 6);
 
     Solution corrente = buscaLocalCompleta(std::move(solucao), instance);
     corrente.calculaCusto(instance);
     Solution best = corrente;
+    expRegistraMelhora(best.custoTotal);
 
     double tempInicial = estimaTemperaturaInicial(corrente, instance, gen);
     double tempMin = std::max(0.01, tempInicial * 0.001);
@@ -156,6 +158,7 @@ Solution SimulatedAnnealing(Solution solucao, const VRPInstance& instance, doubl
                 if (corrente.custoTotal < best.custoTotal) {
                     if (corrente.custoTotal < best.custoTotal) {
                         best = corrente;
+                        expRegistraMelhora(best.custoTotal);
                         tempoBest = std::chrono::steady_clock::now();
                         melhorouNaTemperatura = true;
                         iterSemMelhora = 0;
@@ -201,7 +204,13 @@ Solution SimulatedAnnealing(Solution solucao, const VRPInstance& instance, doubl
         }
     }
 
-    best = buscaLocalCompleta(best, instance);
+    {
+        Solution polidaFinal = buscaLocalCompleta(best, instance);
+        if (polidaFinal.custoTotal < best.custoTotal) {
+            best = std::move(polidaFinal);
+            expRegistraMelhora(best.custoTotal);
+        }
+    }
 
     auto fim = std::chrono::steady_clock::now();
     double tempoTotal = std::chrono::duration<double>(fim - inicio).count();

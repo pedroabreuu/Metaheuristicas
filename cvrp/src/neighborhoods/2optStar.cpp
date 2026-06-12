@@ -1,3 +1,4 @@
+#include "utils/rng.h"
 #include <algorithm>
 #include <random>
 #include <vector>
@@ -93,7 +94,7 @@ Solution opt2Star(Solution solucao, const VRPInstance& instance) {
 }
 
 Solution randomOpt2Star(Solution solucao, const VRPInstance& instance) {
-    static std::mt19937 gen(std::random_device{}());
+    std::mt19937& gen = rngGlobal();
     if (solucao.rotas.size() < 2) return solucao;
 
     std::uniform_int_distribution<int> rotaDist(0, static_cast<int>(solucao.rotas.size()) - 1);

@@ -1,3 +1,4 @@
+#include "utils/rng.h"
 #include <vector>
 #include <algorithm>
 #include <random>
@@ -102,7 +103,7 @@ Solution relocate(Solution solucao, const VRPInstance& instance) {
 }
 
 Solution randomRelocate(Solution solucao, const VRPInstance& instance) {
-  static std::mt19937 gen(std::random_device{}());
+  std::mt19937& gen = rngGlobal();
 
   if (solucao.rotas.size() < 2) {
     return solucao;

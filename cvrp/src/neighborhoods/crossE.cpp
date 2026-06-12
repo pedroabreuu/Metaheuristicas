@@ -1,3 +1,4 @@
+#include "utils/rng.h"
 #include <vector>
 #include <algorithm>
 #include <limits>
@@ -144,7 +145,7 @@ Solution crossExchange(Solution solucao, const VRPInstance& instance) {
 }
 
 Solution randomCrossExchange(Solution solucao, const VRPInstance& instance) {
-    static std::mt19937 gen(std::random_device{}());
+    std::mt19937& gen = rngGlobal();
 
     if (solucao.rotas.size() < 2) return solucao;
 

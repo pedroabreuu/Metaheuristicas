@@ -1,3 +1,5 @@
+#include "utils/experimento.h"
+#include "utils/rng.h"
 #include <random>
 #include <vector>
 #include <limits>
@@ -22,8 +24,7 @@ static double clamp01(double valor) {
 
 Solution PSO(const VRPInstance& instance, double tempoLimite,
              int numParticulas, double w, double c1, double c2, double vMax, bool lsApenasGbest) {
-    std::random_device rd;
-    std::mt19937 gen(rd());
+    std::mt19937& gen = rngGlobal();
     std::uniform_real_distribution<> u01(0.0, 1.0);
 
     const size_t D = instance.nodes.size() - 1;
@@ -51,6 +52,7 @@ Solution PSO(const VRPInstance& instance, double tempoLimite,
         if (s.custoTotal < melhorFit) {
             melhorFit = s.custoTotal;
             melhorSol = s;
+            expRegistraMelhora(melhorFit);
             tempoBest = std::chrono::steady_clock::now();
         }
     };

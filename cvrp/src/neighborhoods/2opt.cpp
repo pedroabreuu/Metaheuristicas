@@ -1,3 +1,4 @@
+#include "utils/rng.h"
 #include <vector>
 #include <algorithm>
 #include <random>
@@ -57,7 +58,7 @@ Solution opt2(Solution solucao, const VRPInstance& instance) {
 }
 
 Solution randomOpt2(Solution solucao, const VRPInstance& instance) {
-    static std::mt19937 gen(std::random_device{}());
+    std::mt19937& gen = rngGlobal();
 
     if (solucao.rotas.empty()) {
         return solucao;

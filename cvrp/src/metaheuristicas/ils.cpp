@@ -1,3 +1,5 @@
+#include "utils/experimento.h"
+#include "utils/rng.h"
 #include <vector>
 #include <chrono>
 #include <random>
@@ -259,7 +261,7 @@ Solution ILS(
     int Bmax,
     int BmaxStuck
 ) {
-    std::mt19937 gen(std::random_device{}());
+    std::mt19937& gen = rngGlobal();
     std::uniform_real_distribution<> dist(0.0, 1.0);
 
     Bmin = std::max(1, Bmin);
@@ -276,6 +278,7 @@ Solution ILS(
     Solution s0 = clarkeWright(instance);
     Solution s = VND(std::move(s0), instance, gen);
     Solution best = s;
+    expRegistraMelhora(best.custoTotal);
  
     const double temperaturaInicial = std::max(1.0, 0.05 * static_cast<double>(best.custoTotal));
     double temperatura = temperaturaInicial;
@@ -308,6 +311,7 @@ Solution ILS(
 
             if (s.custoTotal < best.custoTotal) {
                 best = s;
+                expRegistraMelhora(best.custoTotal);
                 melhorouBest = true;
                 recompensaOperadores(pesosOperadores, perturbada.operadores);
                 tempoBest = std::chrono::steady_clock::now();

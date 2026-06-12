@@ -1,3 +1,5 @@
+#include "utils/experimento.h"
+#include "utils/rng.h"
 #include <vector>
 #include <chrono>
 #include <random>
@@ -23,7 +25,7 @@ static void limpaRotasVazias(Solution& solucao) {
 }
 
 Solution VND(Solution solucao, const VRPInstance& instance) {
-    static std::mt19937 gen(std::random_device{}());
+    std::mt19937& gen = rngGlobal();
     limpaRotasVazias(solucao);
     std::vector<NeighborhoodFunc> vizinhancas = {
         opt2,
@@ -68,7 +70,7 @@ Solution perturbar(Solution solucao, const VRPInstance& instance, int k) {
         randomOrOptInter3,
         randomOpt2Star
     };
-    static std::mt19937 gen(std::random_device{}());
+    std::mt19937& gen = rngGlobal();
     std::uniform_int_distribution<> perturbacao(0, static_cast<int>(perturbacoes.size()) - 1);
 
     for (int i = 0; i < k; i++) {
@@ -81,7 +83,7 @@ Solution perturbar(Solution solucao, const VRPInstance& instance, int k) {
 }
 
 Solution VNS(Solution solucao, const VRPInstance& instance, int kMax, double tempoLimite, double tempInicial, double alpha, int iterSemMelhoraMax) {
-    static std::mt19937 gen(std::random_device{}());
+    std::mt19937& gen = rngGlobal();
     std::uniform_real_distribution<> dist(0.0, 1.0);
 
     auto inicio = std::chrono::steady_clock::now();
@@ -90,6 +92,7 @@ Solution VNS(Solution solucao, const VRPInstance& instance, int kMax, double tem
     solucao.calculaCusto(instance);
     solucao = VND(solucao, instance);
     Solution best = solucao;
+    expRegistraMelhora(best.custoTotal);
     int k = 1;
     double temperatura = tempInicial;
     int iterSemMelhora = 0;
@@ -120,6 +123,7 @@ Solution VNS(Solution solucao, const VRPInstance& instance, int kMax, double tem
 
             if (solucao.custoTotal < best.custoTotal) {
                 best = solucao;
+                expRegistraMelhora(best.custoTotal);
                 tempoBest = std::chrono::steady_clock::now();
                 std::cout << "VNS iter " << iteracao << " | Melhor: " << best.custoTotal << " em " << std::chrono::duration<double>(tempoBest - inicio).count() << "s" << std::endl;
 
