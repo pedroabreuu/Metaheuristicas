@@ -23,6 +23,8 @@ add_executable(cvrp
     src/utils/nearestNeighbor.cpp
     src/utils/CWSavings.cpp
     src/utils/rkDecoder.cpp
+    src/utils/rng.cpp
+    src/utils/experimento.cpp
     src/neighborhoods/2opt.cpp
     src/neighborhoods/relocate.cpp
     src/neighborhoods/swap.cpp
