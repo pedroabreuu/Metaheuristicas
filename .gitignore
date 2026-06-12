@@ -5,6 +5,7 @@ build/
 *.out
 *.exe
 **/results/
+**/resultados/
 .vscode/
 .idea/
 *.swp
@@ -13,3 +14,4 @@ build/
 Thumbs.db
 compile_commands.json
 .cache/
+.log
