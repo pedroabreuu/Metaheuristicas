@@ -39,11 +39,7 @@ static const std::map<std::string, Algoritmo>& registro() {
         }},
         {"brkga", [](const VRPInstance& inst, double tempo) {
             int ger = tempo > 0 ? std::numeric_limits<int>::max() : 2500;
-            return BRKGA(inst, ger, 100, 10, 0.10, 0.70, false, tempo);
-        }},
-        {"brkga-elite", [](const VRPInstance& inst, double tempo) {
-            int ger = tempo > 0 ? std::numeric_limits<int>::max() : 2500;
-            return BRKGA(inst, ger, 100, 10, 0.10, 0.70, true, tempo);
+            return BRKGA(inst, ger, 100, 10, 0.10, 0.70, tempo);
         }},
         {"vns", [](const VRPInstance& inst, double tempo) {
             return VNS(solucaoInicial(inst), inst, 18, tempo > 0 ? tempo : 200.0, 200.0, 0.999, 200);
@@ -58,10 +54,7 @@ static const std::map<std::string, Algoritmo>& registro() {
             return LNS(inst, tempo > 0 ? tempo : 720.0, 1000, 0.1, 0.5, 150.0, 0.995);
         }},
         {"pso", [](const VRPInstance& inst, double tempo) {
-            return PSO(inst, tempo > 0 ? tempo : 300.0, 30, 0.73, 1.5, 1.5, 0.3, false); // LS em toda particula
-        }},
-        {"pso-gbest", [](const VRPInstance& inst, double tempo) {
-            return PSO(inst, tempo > 0 ? tempo : 300.0, 30, 0.73, 1.5, 1.5, 0.3, true);  // LS na melhor por iteracao
+            return PSO(inst, tempo > 0 ? tempo : 300.0, 30, 0.73, 1.5, 1.5, 0.3);
         }},
     };
     return algos;

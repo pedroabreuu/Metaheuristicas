@@ -46,19 +46,14 @@ static Cromossomo crossoverBiased(const Cromossomo& elite, const Cromossomo& nao
     return cromossomo;
 }
 
-static void decodificaEAvalia(Cromossomo& c, const VRPInstance& instance, bool comLS) {
-    if (comLS) {
-        c.solution = decodeEBuscaLocal(c.keys, instance);
-        encodeRandomKeys(c.solution, instance, c.keys);
-        c.lsAplicado = true;
-    } else {
-        c.solution = decodeSemBuscaLocal(c.keys, instance);
-        c.lsAplicado = false;
-    }
+static void decodificaEAvalia(Cromossomo& c, const VRPInstance& instance) {
+    c.solution = decodeEBuscaLocal(c.keys, instance);
+    encodeRandomKeys(c.solution, instance, c.keys);
+    c.lsAplicado = true;
     c.fitness = c.solution.custoTotal;
 }
 
-Solution BRKGA(const VRPInstance& instance, int numGeracoes, int tamanhoPopulacao, int numElite, double mutantes, double probElite, bool lsApenasElite, double tempoLimite) {
+Solution BRKGA(const VRPInstance& instance, int numGeracoes, int tamanhoPopulacao, int numElite, double mutantes, double probElite, double tempoLimite) {
     std::vector<Cromossomo> cromossomos;
     std::mt19937& gen = rngGlobal();
     int numMutantes = static_cast<int>(mutantes * tamanhoPopulacao);
@@ -66,29 +61,14 @@ Solution BRKGA(const VRPInstance& instance, int numGeracoes, int tamanhoPopulaca
     std::uniform_int_distribution<> eliteAleatorio(0, numElite - 1);
     std::uniform_int_distribution<> naoEliteAleatorio(numElite, tamanhoPopulacao - 1);
 
-    const bool comLS = !lsApenasElite;
-
-    auto aplicaLSElites = [&](std::vector<Cromossomo>& pop) {
-        if (!lsApenasElite) return;
-        for (int e = 0; e < numElite; e++) {
-            Cromossomo& c = pop[static_cast<size_t>(e)];
-            if (c.lsAplicado) continue;
-            c.solution = decodeEBuscaLocal(c.keys, instance);
-            encodeRandomKeys(c.solution, instance, c.keys);
-            c.fitness = c.solution.custoTotal;
-            c.lsAplicado = true;
-        }
-    };
-
     for (int i = 0; i < tamanhoPopulacao; i++) {
         Cromossomo c = gerarCromossomoAleatorio(instance, gen);
-        decodificaEAvalia(c, instance, comLS);
+        decodificaEAvalia(c, instance);
         cromossomos.push_back(c);
     }
 
     std::nth_element(cromossomos.begin(), cromossomos.begin() + numElite, cromossomos.end(),
         [](const Cromossomo& a, const Cromossomo& b) { return a.fitness < b.fitness; });
-    aplicaLSElites(cromossomos);
 
     auto melhorGlobal = std::min_element(cromossomos.begin(), cromossomos.end(),
         [](const Cromossomo& a, const Cromossomo& b) {
@@ -110,13 +90,11 @@ Solution BRKGA(const VRPInstance& instance, int numGeracoes, int tamanhoPopulaca
                 return a.fitness < b.fitness;
             });
 
-        aplicaLSElites(cromossomos);
-
         std::vector<Cromossomo> novaGeracao(cromossomos.begin(), cromossomos.begin() + numElite);
 
         for (int j = 0; j < numMutantes; j++) {
             Cromossomo c = gerarCromossomoAleatorio(instance, gen);
-            decodificaEAvalia(c, instance, comLS);
+            decodificaEAvalia(c, instance);
             novaGeracao.push_back(c);
         }
 
@@ -125,7 +103,7 @@ Solution BRKGA(const VRPInstance& instance, int numGeracoes, int tamanhoPopulaca
             int paiNaoElite = naoEliteAleatorio(gen);
 
             Cromossomo c = crossoverBiased(cromossomos[paiElite], cromossomos[paiNaoElite], probElite, gen);
-            decodificaEAvalia(c, instance, comLS);
+            decodificaEAvalia(c, instance);
             novaGeracao.push_back(c);
         }
 
