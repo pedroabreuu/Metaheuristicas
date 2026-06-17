@@ -59,7 +59,10 @@ VRPInstance parseVRP(const std::string& filepath) {
             std::string chave, separador, valor;
             ss >> chave >> separador >> valor;
 
-            if (chave == "CAPACITY") {
+            if (chave == "NAME") {
+                instance.name = valor;
+            }
+            else if (chave == "CAPACITY") {
                 instance.capacity = std::stoi(valor);
             }
             else if (chave == "COMMENT") {
@@ -78,6 +81,22 @@ VRPInstance parseVRP(const std::string& filepath) {
     }
 
     inFile.close();
+
+    if (instance.num_trucks == 0) {
+        std::string fonte = instance.name.empty() ? filepath : instance.name;
+        size_t posK = fonte.rfind("-k");
+        if (posK != std::string::npos) {
+            size_t inicio = posK + 2;
+            size_t fim = inicio;
+            while (fim < fonte.size() && std::isdigit(static_cast<unsigned char>(fonte[fim]))) {
+                fim++;
+            }
+            if (fim > inicio) {
+                instance.num_trucks = std::stoi(fonte.substr(inicio, fim - inicio));
+            }
+        }
+    }
+
     instance.buildIndex();
     return instance;
 }
