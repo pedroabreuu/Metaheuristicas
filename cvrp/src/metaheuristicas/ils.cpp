@@ -20,6 +20,11 @@
 
 using NeighborhoodFunc = Solution (*)(Solution, const VRPInstance&);
 
+enum class BuscaLocal {
+    VND,
+    RVND
+};
+
 enum class TipoPerturbacao {
     Relocate,
     Opt2,
@@ -42,7 +47,7 @@ static void limpaRotasVazias(Solution& solucao) {
         solucao.rotas.end());
 }
 
-static Solution VND(Solution solucao, const VRPInstance& instance, std::mt19937& gen) {
+static Solution buscaLocal(Solution solucao, const VRPInstance& instance, std::mt19937& gen, BuscaLocal modo) {
     limpaRotasVazias(solucao);
     std::vector<NeighborhoodFunc> vizinhancas = {
         opt2,
@@ -54,7 +59,10 @@ static Solution VND(Solution solucao, const VRPInstance& instance, std::mt19937&
         crossExchange,
         opt2Star
     };
-    std::shuffle(vizinhancas.begin(), vizinhancas.end(), gen);
+
+    if (modo == BuscaLocal::RVND) {
+        std::shuffle(vizinhancas.begin(), vizinhancas.end(), gen);
+    }
 
     solucao.calculaCusto(instance);
     int k = 0;
@@ -66,7 +74,9 @@ static Solution VND(Solution solucao, const VRPInstance& instance, std::mt19937&
         if (candidata.custoTotal < solucao.custoTotal) {
             solucao = std::move(candidata);
             k = 0;
-            std::shuffle(vizinhancas.begin(), vizinhancas.end(), gen);
+            if (modo == BuscaLocal::RVND) {
+                std::shuffle(vizinhancas.begin(), vizinhancas.end(), gen);
+            }
         } else {
             k++;
         }
@@ -259,8 +269,10 @@ Solution ILS(
     int iterSemMelhoraMax,
     int Bmin,
     int Bmax,
-    int BmaxStuck
+    int BmaxStuck,
+    bool usarRVND
 ) {
+    const BuscaLocal modo = usarRVND ? BuscaLocal::RVND : BuscaLocal::VND;
     std::mt19937& gen = rngGlobal();
     std::uniform_real_distribution<> dist(0.0, 1.0);
 
@@ -276,7 +288,7 @@ Solution ILS(
     auto tempoBest = inicio;
 
     Solution s0 = clarkeWright(instance);
-    Solution s = VND(std::move(s0), instance, gen);
+    Solution s = buscaLocal(std::move(s0), instance, gen, modo);
     Solution best = s;
     expRegistraMelhora(best.custoTotal);
  
@@ -301,7 +313,7 @@ Solution ILS(
         std::uniform_int_distribution<> betaDist(bMinAtual, bMaxAtual);
         int beta = betaDist(gen);
         ResultadoPerturbacao perturbada = perturbar(s, instance, beta, pesosOperadores, gen);
-        Solution candidata = VND(std::move(perturbada.solucao), instance, gen);
+        Solution candidata = buscaLocal(std::move(perturbada.solucao), instance, gen, modo);
 
         double delta = candidata.custoTotal - s.custoTotal;
         bool melhorouBest = false;
@@ -348,10 +360,10 @@ Solution ILS(
 
         if (iterSemMelhora >= iterSemMelhoraMax) {
             Solution reconstruida = constroiAleatoria(instance, gen);
-            reconstruida = VND(std::move(reconstruida), instance, gen);
+            reconstruida = buscaLocal(std::move(reconstruida), instance, gen, modo);
 
             Solution escape = perturbarForte(best, instance, BmaxStuck, gen);
-            escape = VND(std::move(escape), instance, gen);
+            escape = buscaLocal(std::move(escape), instance, gen, modo);
 
             s = (reconstruida.custoTotal < escape.custoTotal)
                 ? std::move(reconstruida)

@@ -9,5 +9,6 @@ Solution ILS(
     int iterSemMelhoraMax,
     int Bmin = 1,
     int Bmax = 3,
-    int BmaxStuck = 5
+    int BmaxStuck = 5,
+    bool usarRVND = true
 );

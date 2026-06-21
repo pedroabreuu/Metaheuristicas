@@ -48,7 +48,10 @@ static const std::map<std::string, Algoritmo>& registro() {
             return GRASP(inst, tempo > 0 ? tempo : 900.0);
         }},
         {"ils", [](const VRPInstance& inst, double tempo) {
-            return ILS(inst, tempo > 0 ? tempo : 180.0, 150, 1, 3, 8);
+            return ILS(inst, tempo > 0 ? tempo : 180.0, 150, 1, 3, 8, true);
+        }},
+        {"ils-vnd", [](const VRPInstance& inst, double tempo) {
+            return ILS(inst, tempo > 0 ? tempo : 180.0, 150, 1, 3, 8, false);
         }},
         {"lns", [](const VRPInstance& inst, double tempo) {
             return LNS(inst, tempo > 0 ? tempo : 720.0, 1000, 0.1, 0.5, 150.0, 0.995);
