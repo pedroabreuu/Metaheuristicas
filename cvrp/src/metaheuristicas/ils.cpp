@@ -3,7 +3,6 @@
 #include <vector>
 #include <chrono>
 #include <random>
-#include <cmath>
 #include <algorithm>
 #include <iostream>
 #include <numeric>
@@ -19,11 +18,6 @@
 #include "neighborhoods/crossE.h"
 
 using NeighborhoodFunc = Solution (*)(Solution, const VRPInstance&);
-
-enum class BuscaLocal {
-    VND,
-    RVND
-};
 
 enum class TipoPerturbacao {
     Relocate,
@@ -47,7 +41,7 @@ static void limpaRotasVazias(Solution& solucao) {
         solucao.rotas.end());
 }
 
-static Solution buscaLocal(Solution solucao, const VRPInstance& instance, std::mt19937& gen, BuscaLocal modo) {
+static Solution buscaLocal(Solution solucao, const VRPInstance& instance, std::mt19937& gen) {
     limpaRotasVazias(solucao);
     std::vector<NeighborhoodFunc> vizinhancas = {
         opt2,
@@ -56,13 +50,11 @@ static Solution buscaLocal(Solution solucao, const VRPInstance& instance, std::m
         orOptInter3,
         swapIntra,
         swapInter,
-        crossExchange,
-        opt2Star
+        // crossExchange,
+        // opt2Star
     };
 
-    if (modo == BuscaLocal::RVND) {
-        std::shuffle(vizinhancas.begin(), vizinhancas.end(), gen);
-    }
+    std::shuffle(vizinhancas.begin(), vizinhancas.end(), gen);
 
     solucao.calculaCusto(instance);
     int k = 0;
@@ -74,9 +66,7 @@ static Solution buscaLocal(Solution solucao, const VRPInstance& instance, std::m
         if (candidata.custoTotal < solucao.custoTotal) {
             solucao = std::move(candidata);
             k = 0;
-            if (modo == BuscaLocal::RVND) {
-                std::shuffle(vizinhancas.begin(), vizinhancas.end(), gen);
-            }
+            std::shuffle(vizinhancas.begin(), vizinhancas.end(), gen);
         } else {
             k++;
         }
@@ -177,80 +167,6 @@ static Solution perturbarForte(
     return solucao;
 }
 
-static Solution constroiAleatoria(const VRPInstance& instance, std::mt19937& gen) {
-    struct Insercao {
-        size_t rota;
-        size_t posicao;
-        double delta;
-        bool novaRota;
-    };
-
-    Solution solucao;
-    std::vector<int> cargas;
-    std::vector<int> clientes;
-    clientes.reserve(instance.nodes.size());
-
-    for (const Node& node : instance.nodes) {
-        if (node.id != instance.depot_id) {
-            clientes.push_back(node.id);
-        }
-    }
-
-    std::shuffle(clientes.begin(), clientes.end(), gen);
-    const Node& depot = instance.getDepot();
-
-    for (int clienteId : clientes) {
-        const Node& cliente = instance.getNode(clienteId);
-        std::vector<Insercao> candidatos;
-
-        for (size_t r = 0; r < solucao.rotas.size(); r++) {
-            if (cargas[r] + cliente.demanda > instance.capacity) continue;
-
-            for (size_t pos = 0; pos <= solucao.rotas[r].size(); pos++) {
-                const Node& antes = (pos == 0) ? depot : instance.getNode(solucao.rotas[r][pos - 1]);
-                const Node& depois = (pos == solucao.rotas[r].size()) ? depot : instance.getNode(solucao.rotas[r][pos]);
-                double delta = instance.distancia(antes, cliente)
-                             + instance.distancia(cliente, depois)
-                             - instance.distancia(antes, depois);
-                candidatos.push_back({r, pos, delta, false});
-            }
-        }
-
-        if (instance.num_trucks == 0 || static_cast<int>(solucao.rotas.size()) < instance.num_trucks) {
-            double delta = instance.distancia(depot, cliente) + instance.distancia(cliente, depot);
-            candidatos.push_back({solucao.rotas.size(), 0, delta, true});
-        }
-
-        if (candidatos.empty()) {
-            solucao.rotas.push_back({clienteId});
-            cargas.push_back(cliente.demanda);
-            continue;
-        }
-
-        std::sort(candidatos.begin(), candidatos.end(),
-            [](const Insercao& a, const Insercao& b) { return a.delta < b.delta; });
-
-        int limiteRcl = std::min(3, static_cast<int>(candidatos.size()));
-        std::uniform_int_distribution<int> escolha(0, limiteRcl - 1);
-        const Insercao escolhida = candidatos[static_cast<size_t>(escolha(gen))];
-
-        if (escolhida.novaRota) {
-            solucao.rotas.push_back({clienteId});
-            cargas.push_back(cliente.demanda);
-        } else {
-            solucao.rotas[escolhida.rota].insert(
-                solucao.rotas[escolhida.rota].begin() + static_cast<long>(escolhida.posicao),
-                clienteId
-            );
-            cargas[escolhida.rota] += cliente.demanda;
-        }
-    }
-
-    limpaRotasVazias(solucao);
-    solucao.calculaCusto(instance);
-    return solucao;
-}
-
 static void recompensaOperadores(std::vector<double>& pesosOperadores, const std::vector<int>& operadores) {
     for (int operador : operadores) {
         pesosOperadores[static_cast<size_t>(operador)] += 1.0;
@@ -270,12 +186,9 @@ Solution ILS(
     int iterSemMelhoraMax,
     int Bmin,
     int Bmax,
-    int BmaxStuck,
-    bool usarRVND
+    int BmaxStuck
 ) {
-    const BuscaLocal modo = usarRVND ? BuscaLocal::RVND : BuscaLocal::VND;
     std::mt19937& gen = rngGlobal();
-    std::uniform_real_distribution<> dist(0.0, 1.0);
 
     Bmin = std::max(1, Bmin);
     Bmax = std::max(Bmin, Bmax);
@@ -289,12 +202,10 @@ Solution ILS(
     auto tempoBest = inicio;
 
     Solution s0 = clarkeWright(instance);
-    Solution s = buscaLocal(std::move(s0), instance, gen, modo);
+    Solution s = buscaLocal(std::move(s0), instance, gen);
     Solution best = s;
     expRegistraMelhora(best.custoTotal);
- 
-    const double temperaturaInicial = std::max(1.0, 0.05 * static_cast<double>(best.custoTotal));
-    double temperatura = temperaturaInicial;
+
     int iterSemMelhora = 0;
     int iteracao = 0;
     std::vector<double> pesosOperadores(7, 1.0);
@@ -314,12 +225,11 @@ Solution ILS(
         std::uniform_int_distribution<> betaDist(bMinAtual, bMaxAtual);
         int beta = betaDist(gen);
         ResultadoPerturbacao perturbada = perturbar(s, instance, beta, pesosOperadores, gen);
-        Solution candidata = buscaLocal(std::move(perturbada.solucao), instance, gen, modo);
+        Solution candidata = buscaLocal(std::move(perturbada.solucao), instance, gen);
 
-        double delta = candidata.custoTotal - s.custoTotal;
         bool melhorouBest = false;
 
-        if (delta < 0) {
+        if (candidata.custoTotal < s.custoTotal) {
             s = std::move(candidata);
 
             if (s.custoTotal < best.custoTotal) {
@@ -335,8 +245,6 @@ Solution ILS(
                     return best;
                 }
             }
-        } else if (temperatura > 0 && dist(gen) < std::exp(-delta / temperatura)) {
-            s = std::move(candidata);
         }
 
         if (melhorouBest) {
@@ -353,24 +261,10 @@ Solution ILS(
             }
         }
 
-        agora = std::chrono::steady_clock::now();
-        tempoDecorrido = std::chrono::duration<double>(agora - inicio).count();
-        double progresso = (tempoLimite > 0.0) ? std::min(1.0, tempoDecorrido / tempoLimite) : 1.0;
-        double alphaDinamico = 0.9999 - (0.0049 * progresso);
-        temperatura = std::max(temperaturaInicial * 0.001, temperatura * alphaDinamico);
-
         if (iterSemMelhora >= iterSemMelhoraMax) {
-            Solution reconstruida = constroiAleatoria(instance, gen);
-            reconstruida = buscaLocal(std::move(reconstruida), instance, gen, modo);
-
             Solution escape = perturbarForte(best, instance, BmaxStuck, gen);
-            escape = buscaLocal(std::move(escape), instance, gen, modo);
+            s = buscaLocal(std::move(escape), instance, gen);
 
-            s = (reconstruida.custoTotal < escape.custoTotal)
-                ? std::move(reconstruida)
-                : std::move(escape);
-
-            temperatura = temperaturaInicial;
             iterSemMelhora = 0;
             bMinAtual = baseBmin;
             bMaxAtual = baseBmax;
