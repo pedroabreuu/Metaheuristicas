@@ -163,13 +163,14 @@ static Solution perturbarForte(
         TipoPerturbacao::Opt2Star
     };
 
-    std::shuffle(perturbacoes.begin(), perturbacoes.end(), gen);
-
     intensidadeMaxima = std::max(1, intensidadeMaxima);
-    int quantidade = std::min(intensidadeMaxima, static_cast<int>(perturbacoes.size()));
+    for (int i = 0; i < intensidadeMaxima; i++) {
+        if (i % static_cast<int>(perturbacoes.size()) == 0) {
+            std::shuffle(perturbacoes.begin(), perturbacoes.end(), gen);
+        }
 
-    for (int i = 0; i < quantidade; i++) {
-        solucao = aplicaPerturbacao(std::move(solucao), instance, perturbacoes[static_cast<size_t>(i)]);
+        const size_t indice = static_cast<size_t>(i % static_cast<int>(perturbacoes.size()));
+        solucao = aplicaPerturbacao(std::move(solucao), instance, perturbacoes[indice]);
     }
 
     limpaRotasVazias(solucao);
