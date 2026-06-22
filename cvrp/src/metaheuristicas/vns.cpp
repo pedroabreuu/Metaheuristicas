@@ -3,7 +3,6 @@
 #include <vector>
 #include <chrono>
 #include <random>
-#include <cmath>
 #include <algorithm>
 #include <iostream>
 #include <utility>
@@ -34,7 +33,7 @@ Solution VND(Solution solucao, const VRPInstance& instance) {
         orOptInter3,
         swapIntra,
         swapInter,
-        crossExchange,
+        // crossExchange,
         opt2Star
     };
     std::shuffle(vizinhancas.begin(), vizinhancas.end(), gen);
@@ -82,7 +81,7 @@ Solution perturbar(Solution solucao, const VRPInstance& instance, int k) {
     return solucao;
 }
 
-Solution VNS(Solution solucao, const VRPInstance& instance, int kMax, double tempoLimite, double tempInicial, double alpha, int iterSemMelhoraMax) {
+Solution VNS(Solution solucao, const VRPInstance& instance, int kMax, double tempoLimite, int iterSemMelhoraMax) {
     std::mt19937& gen = rngGlobal();
     std::uniform_real_distribution<> dist(0.0, 1.0);
 
@@ -94,13 +93,12 @@ Solution VNS(Solution solucao, const VRPInstance& instance, int kMax, double tem
     Solution best = solucao;
     expRegistraMelhora(best.custoTotal);
     int k = 1;
-    double temperatura = tempInicial;
     int iterSemMelhora = 0;
     int iteracao = 0;
 
     std::cout << "VNS inicio | Custo: " << best.custoTotal << std::endl;
 
-    if (best.custoTotal == instance.optimal_value) {
+    if (instance.optimal_value > 0 && best.custoTotal == instance.optimal_value) {
         std::cout << "VNS: Otimo encontrado em " << std::chrono::duration<double>(tempoBest - inicio).count() << "s" << std::endl;
         return best;
     }
@@ -114,17 +112,17 @@ Solution VNS(Solution solucao, const VRPInstance& instance, int kMax, double tem
         candidata = VND(candidata, instance);
         candidata.calculaCusto(instance);
 
-        double delta = candidata.custoTotal - solucao.custoTotal;
-
-        if (delta < 0) {
+        bool melhorouBest = false;
+        if (candidata.custoTotal < solucao.custoTotal) {
             solucao = candidata;
             k = 1;
-            iterSemMelhora = 0;
 
             if (solucao.custoTotal < best.custoTotal) {
                 best = solucao;
                 expRegistraMelhora(best.custoTotal);
                 tempoBest = std::chrono::steady_clock::now();
+                iterSemMelhora = 0;
+                melhorouBest = true;
                 std::cout << "VNS iter " << iteracao << " | Melhor: " << best.custoTotal << " em " << std::chrono::duration<double>(tempoBest - inicio).count() << "s" << std::endl;
 
                 if (instance.optimal_value > 0 && best.custoTotal == instance.optimal_value) {
@@ -132,17 +130,12 @@ Solution VNS(Solution solucao, const VRPInstance& instance, int kMax, double tem
                     return best;
                 }
             }
-        } else if (temperatura > 0 && dist(gen) < std::exp(-delta / temperatura)) {
-            solucao = candidata;
-            k = 1;
-            iterSemMelhora++;
         } else {
             k++;
             if (k > kMax) k = 1;
-            iterSemMelhora++;
         }
 
-        temperatura *= alpha;
+        if (!melhorouBest) iterSemMelhora++;
 
         if (iterSemMelhora >= iterSemMelhoraMax) {
             if (dist(gen) < 0.3) {
@@ -152,7 +145,6 @@ Solution VNS(Solution solucao, const VRPInstance& instance, int kMax, double tem
                 solucao = VND(solucao, instance);
             }
             k = 1;
-            temperatura = tempInicial;
             iterSemMelhora = 0;
         }
 
