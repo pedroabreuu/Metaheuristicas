@@ -2,6 +2,8 @@
 #include <algorithm>
 #include <limits>
 #include <utility>
+#include <stdexcept>
+#include <random>
 #include "utils/CWSavings.h"
 
 struct Saving {
@@ -10,34 +12,177 @@ struct Saving {
   double valor;
 };
 
-static bool empacotaPorDemanda(
-    const VRPInstance& instance,
-    const std::vector<int>& clientes,
-    std::vector<std::vector<int>>& rotas,
-    std::vector<int>& demandas,
-    size_t idx) {
-  if (idx == clientes.size()) return true;
+struct Insercao {
+  size_t rota;
+  size_t posicao;
+  double delta;
+};
 
-  const int cliente = clientes[idx];
+static Insercao melhorInsercaoNaRota(
+    const VRPInstance& instance,
+    const std::vector<int>& rota,
+    int cliente) {
+  const Node& deposito = instance.getDepot();
+  const Node& novo = instance.getNode(cliente);
+  Insercao melhor{0, 0, std::numeric_limits<double>::max()};
+
+  for (size_t pos = 0; pos <= rota.size(); pos++) {
+    const Node& antes = (pos == 0) ? deposito : instance.getNode(rota[pos - 1]);
+    const Node& depois = (pos == rota.size()) ? deposito : instance.getNode(rota[pos]);
+    const double delta = instance.distancia(antes, novo)
+        + instance.distancia(novo, depois)
+        - instance.distancia(antes, depois);
+    if (delta < melhor.delta) melhor = {0, pos, delta};
+  }
+
+  return melhor;
+}
+
+static bool melhorInsercao(
+    const VRPInstance& instance,
+    const std::vector<std::vector<int>>& rotas,
+    const std::vector<int>& demandas,
+    int cliente,
+    Insercao& melhor) {
   const int demanda = instance.getNode(cliente).demanda;
-  int ultimaDemandaTestada = -1;
+  melhor = {0, 0, std::numeric_limits<double>::max()};
 
   for (size_t r = 0; r < rotas.size(); r++) {
-    if (demandas[r] == ultimaDemandaTestada) continue;
     if (demandas[r] + demanda > instance.capacity) continue;
+    Insercao candidata = melhorInsercaoNaRota(instance, rotas[r], cliente);
+    candidata.rota = r;
+    const int folgaCandidata = instance.capacity - demandas[r] - demanda;
+    const int folgaMelhor = melhor.delta == std::numeric_limits<double>::max()
+        ? std::numeric_limits<int>::max()
+        : instance.capacity - demandas[melhor.rota] - demanda;
+    if (folgaCandidata < folgaMelhor ||
+        (folgaCandidata == folgaMelhor && candidata.delta < melhor.delta)) {
+      melhor = candidata;
+    }
+  }
 
-    rotas[r].push_back(cliente);
-    demandas[r] += demanda;
+  return melhor.delta != std::numeric_limits<double>::max();
+}
 
-    if (empacotaPorDemanda(instance, clientes, rotas, demandas, idx + 1)) {
-      return true;
+static bool tentaInsercaoPorEjecao(
+    const VRPInstance& instance,
+    std::vector<std::vector<int>>& rotas,
+    std::vector<int>& demandas,
+    int cliente) {
+  const int demandaCliente = instance.getNode(cliente).demanda;
+  double melhorDelta = std::numeric_limits<double>::max();
+  size_t melhorRota = 0, melhorPosRemocao = 0;
+  Insercao melhorDestino{0, 0, 0.0};
+  Insercao melhorInsercaoCliente{0, 0, 0.0};
+
+  for (size_t r = 0; r < rotas.size(); r++) {
+    for (size_t pos = 0; pos < rotas[r].size(); pos++) {
+      const int ejetado = rotas[r][pos];
+      const int demandaEjetado = instance.getNode(ejetado).demanda;
+      if (demandas[r] - demandaEjetado + demandaCliente > instance.capacity) continue;
+
+      std::vector<int> rotaSemEjetado = rotas[r];
+      rotaSemEjetado.erase(rotaSemEjetado.begin() + static_cast<std::ptrdiff_t>(pos));
+      Insercao insercaoCliente = melhorInsercaoNaRota(instance, rotaSemEjetado, cliente);
+
+      for (size_t destino = 0; destino < rotas.size(); destino++) {
+        if (destino == r || demandas[destino] + demandaEjetado > instance.capacity) continue;
+        Insercao insercaoEjetado = melhorInsercaoNaRota(instance, rotas[destino], ejetado);
+        const double delta = insercaoCliente.delta + insercaoEjetado.delta;
+        if (delta < melhorDelta) {
+          melhorDelta = delta;
+          melhorRota = r;
+          melhorPosRemocao = pos;
+          melhorDestino = insercaoEjetado;
+          melhorDestino.rota = destino;
+          melhorInsercaoCliente = insercaoCliente;
+          melhorInsercaoCliente.rota = r;
+        }
+      }
+    }
+  }
+
+  if (melhorDelta == std::numeric_limits<double>::max()) return false;
+
+  const int ejetado = rotas[melhorRota][melhorPosRemocao];
+  rotas[melhorRota].erase(rotas[melhorRota].begin() + static_cast<std::ptrdiff_t>(melhorPosRemocao));
+  rotas[melhorRota].insert(
+      rotas[melhorRota].begin() + static_cast<std::ptrdiff_t>(melhorInsercaoCliente.posicao),
+      cliente);
+  rotas[melhorDestino.rota].insert(
+      rotas[melhorDestino.rota].begin() + static_cast<std::ptrdiff_t>(melhorDestino.posicao),
+      ejetado);
+
+  demandas[melhorRota] += demandaCliente - instance.getNode(ejetado).demanda;
+  demandas[melhorDestino.rota] += instance.getNode(ejetado).demanda;
+  return true;
+}
+
+static bool eliminaRota(
+    const VRPInstance& instance,
+    std::vector<std::vector<int>>& rotas,
+    std::vector<int>& demandas,
+    size_t indiceRota) {
+  std::vector<int> pendentes = rotas[indiceRota];
+  rotas.erase(rotas.begin() + static_cast<std::ptrdiff_t>(indiceRota));
+  demandas.erase(demandas.begin() + static_cast<std::ptrdiff_t>(indiceRota));
+
+  while (!pendentes.empty()) {
+    size_t indiceEscolhido = pendentes.size();
+    Insercao insercaoEscolhida{0, 0, 0.0};
+    int maiorDemanda = -1;
+
+    for (size_t i = 0; i < pendentes.size(); i++) {
+      Insercao candidata{0, 0, 0.0};
+      if (!melhorInsercao(instance, rotas, demandas, pendentes[i], candidata)) {
+        continue;
+      }
+
+      const int demanda = instance.getNode(pendentes[i]).demanda;
+      if (demanda > maiorDemanda) {
+        maiorDemanda = demanda;
+        indiceEscolhido = i;
+        insercaoEscolhida = candidata;
+      }
     }
 
-    demandas[r] -= demanda;
-    rotas[r].pop_back();
-    ultimaDemandaTestada = demandas[r];
+    if (indiceEscolhido < pendentes.size()) {
+      const int cliente = pendentes[indiceEscolhido];
+      rotas[insercaoEscolhida.rota].insert(
+          rotas[insercaoEscolhida.rota].begin() + static_cast<std::ptrdiff_t>(insercaoEscolhida.posicao),
+          cliente);
+      demandas[insercaoEscolhida.rota] += instance.getNode(cliente).demanda;
+      pendentes.erase(pendentes.begin() + static_cast<std::ptrdiff_t>(indiceEscolhido));
+      continue;
+    }
 
-    if (demandas[r] == 0) break;
+    auto clienteMaisDificil = std::max_element(
+        pendentes.begin(), pendentes.end(),
+        [&](int a, int b) { return instance.getNode(a).demanda < instance.getNode(b).demanda; });
+    if (!tentaInsercaoPorEjecao(instance, rotas, demandas, *clienteMaisDificil)) return false;
+    pendentes.erase(clienteMaisDificil);
+  }
+
+  return true;
+}
+
+static bool eliminaUmaRota(
+    const VRPInstance& instance,
+    std::vector<std::vector<int>>& rotas,
+    std::vector<int>& demandas) {
+  std::vector<size_t> candidatas(rotas.size());
+  for (size_t i = 0; i < candidatas.size(); i++) candidatas[i] = i;
+  std::sort(candidatas.begin(), candidatas.end(),
+      [&](size_t a, size_t b) { return demandas[a] < demandas[b]; });
+
+  for (size_t candidata : candidatas) {
+    auto rotasTeste = rotas;
+    auto demandasTeste = demandas;
+    if (eliminaRota(instance, rotasTeste, demandasTeste, candidata)) {
+      rotas = std::move(rotasTeste);
+      demandas = std::move(demandasTeste);
+      return true;
+    }
   }
 
   return false;
@@ -52,20 +197,172 @@ static void ordenaRotaPorVizinhoMaisProximo(
   const Node* atual = &instance.getDepot();
   while (!naoVisitados.empty()) {
     auto melhor = naoVisitados.begin();
-    double melhorDist = std::numeric_limits<double>::max();
-
+    int melhorDistancia = std::numeric_limits<int>::max();
     for (auto it = naoVisitados.begin(); it != naoVisitados.end(); ++it) {
-      double dist = instance.distancia(*atual, instance.getNode(*it));
-      if (dist < melhorDist) {
-        melhorDist = dist;
+      const int distancia = instance.distancia(*atual, instance.getNode(*it));
+      if (distancia < melhorDistancia) {
+        melhorDistancia = distancia;
         melhor = it;
       }
     }
-
     rota.push_back(*melhor);
     atual = &instance.getNode(*melhor);
     naoVisitados.erase(melhor);
   }
+}
+
+static long long sobrecargaQuadratica(int carga, int capacidade) {
+  const long long excesso = std::max(0, carga - capacidade);
+  return excesso * excesso;
+}
+
+static bool balanceiaDemandas(
+    const VRPInstance& instance,
+    const std::vector<int>& clientes,
+    std::vector<std::vector<int>>& rotas,
+    std::vector<int>& demandas) {
+  std::mt19937 gen(0xBADC0DEu);
+  constexpr int reinicios = 128;
+
+  for (int reinicio = 0; reinicio < reinicios; reinicio++) {
+    std::vector<int> ordem = clientes;
+    std::shuffle(ordem.begin(), ordem.end(), gen);
+    std::stable_sort(ordem.begin(), ordem.end(), [&](int a, int b) {
+      return instance.getNode(a).demanda > instance.getNode(b).demanda;
+    });
+
+    std::vector<std::vector<int>> candidatas(static_cast<size_t>(instance.num_trucks));
+    std::vector<int> cargas(static_cast<size_t>(instance.num_trucks), 0);
+    for (int cliente : ordem) {
+      const auto destino = std::min_element(cargas.begin(), cargas.end());
+      const size_t rota = static_cast<size_t>(std::distance(cargas.begin(), destino));
+      candidatas[rota].push_back(cliente);
+      cargas[rota] += instance.getNode(cliente).demanda;
+    }
+
+    long long custo = 0;
+    for (int carga : cargas) custo += sobrecargaQuadratica(carga, instance.capacity);
+    if (custo == 0) {
+      rotas = std::move(candidatas);
+      demandas = std::move(cargas);
+      return true;
+    }
+
+    constexpr int iteracoes = 150000;
+    for (int iteracao = 0; iteracao < iteracoes; iteracao++) {
+      size_t origem = 0;
+      for (size_t r = 1; r < cargas.size(); r++) {
+        if (cargas[r] > cargas[origem]) origem = r;
+      }
+      if (cargas[origem] <= instance.capacity || candidatas[origem].empty()) break;
+
+      std::uniform_int_distribution<size_t> escolheOrigem(0, candidatas[origem].size() - 1);
+      std::uniform_int_distribution<size_t> escolheRota(0, candidatas.size() - 1);
+      const size_t posOrigem = escolheOrigem(gen);
+      size_t destino = escolheRota(gen);
+      if (destino == origem || candidatas[destino].empty()) continue;
+      std::uniform_int_distribution<size_t> escolheDestino(0, candidatas[destino].size() - 1);
+      const size_t posDestino = escolheDestino(gen);
+
+      const int clienteOrigem = candidatas[origem][posOrigem];
+      const int clienteDestino = candidatas[destino][posDestino];
+      const int novaCargaOrigem = cargas[origem]
+          - instance.getNode(clienteOrigem).demanda + instance.getNode(clienteDestino).demanda;
+      const int novaCargaDestino = cargas[destino]
+          - instance.getNode(clienteDestino).demanda + instance.getNode(clienteOrigem).demanda;
+      const long long novoCusto = custo
+          - sobrecargaQuadratica(cargas[origem], instance.capacity)
+          - sobrecargaQuadratica(cargas[destino], instance.capacity)
+          + sobrecargaQuadratica(novaCargaOrigem, instance.capacity)
+          + sobrecargaQuadratica(novaCargaDestino, instance.capacity);
+
+      const bool melhora = novoCusto < custo;
+      const bool aceitaEmpate = novoCusto == custo && (gen() % 8U) == 0U;
+      const bool aceitaEscape = novoCusto > custo && (gen() % 2000U) == 0U;
+      if (!melhora && !aceitaEmpate && !aceitaEscape) continue;
+
+      std::swap(candidatas[origem][posOrigem], candidatas[destino][posDestino]);
+      cargas[origem] = novaCargaOrigem;
+      cargas[destino] = novaCargaDestino;
+      custo = novoCusto;
+      if (custo == 0) {
+        rotas = std::move(candidatas);
+        demandas = std::move(cargas);
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+static bool reempacotaEmNumeroFixoDeRotas(
+    const VRPInstance& instance,
+    const std::vector<std::vector<int>>& rotasOriginais,
+    std::vector<std::vector<int>>& rotas,
+    std::vector<int>& demandas) {
+  std::vector<int> clientes;
+  for (const auto& rota : rotasOriginais) {
+    clientes.insert(clientes.end(), rota.begin(), rota.end());
+  }
+
+  if (balanceiaDemandas(instance, clientes, rotas, demandas)) {
+    for (auto& rota : rotas) ordenaRotaPorVizinhoMaisProximo(instance, rota);
+    return true;
+  }
+
+  std::sort(clientes.begin(), clientes.end(), [&](int a, int b) {
+    return instance.getNode(a).demanda > instance.getNode(b).demanda;
+  });
+
+  std::mt19937 gen(0xC0FFEEu);
+  constexpr int tentativas = 128;
+  for (int tentativa = 0; tentativa < tentativas; tentativa++) {
+    std::vector<int> ordem = clientes;
+    if (tentativa > 0) {
+      std::shuffle(ordem.begin(), ordem.end(), gen);
+      std::stable_sort(ordem.begin(), ordem.end(), [&](int a, int b) {
+        return instance.getNode(a).demanda > instance.getNode(b).demanda;
+      });
+    }
+
+    std::vector<std::vector<int>> candidatas(static_cast<size_t>(instance.num_trucks));
+    std::vector<int> demandasCandidatas(static_cast<size_t>(instance.num_trucks), 0);
+    bool viavel = true;
+
+    for (int cliente : ordem) {
+      const int demanda = instance.getNode(cliente).demanda;
+      int melhorRota = -1;
+      int menorFolga = std::numeric_limits<int>::max();
+      for (size_t r = 0; r < candidatas.size(); r++) {
+        const int folga = instance.capacity - demandasCandidatas[r] - demanda;
+        if (folga < 0 || folga > menorFolga) continue;
+        if (folga < menorFolga || (gen() & 1U) == 0U) {
+          menorFolga = folga;
+          melhorRota = static_cast<int>(r);
+        }
+      }
+
+      if (melhorRota == -1) {
+        viavel = false;
+        break;
+      }
+      candidatas[static_cast<size_t>(melhorRota)].push_back(cliente);
+      demandasCandidatas[static_cast<size_t>(melhorRota)] += demanda;
+    }
+
+    if (!viavel) continue;
+    for (auto& rota : candidatas) ordenaRotaPorVizinhoMaisProximo(instance, rota);
+    candidatas.erase(std::remove_if(candidatas.begin(), candidatas.end(),
+        [](const std::vector<int>& rota) { return rota.empty(); }), candidatas.end());
+    demandasCandidatas.erase(std::remove(demandasCandidatas.begin(), demandasCandidatas.end(), 0),
+        demandasCandidatas.end());
+    rotas = std::move(candidatas);
+    demandas = std::move(demandasCandidatas);
+    return true;
+  }
+
+  return false;
 }
 
 Solution clarkeWright(const VRPInstance& instance) {
@@ -252,38 +549,13 @@ Solution clarkeWright(const VRPInstance& instance) {
     }
 
     if (!esvaziou) {
-      std::vector<int> clientes;
-      clientes.reserve(instance.nodes.size() - 1);
-      for (const auto& rota : solucao.rotas) {
-        clientes.insert(clientes.end(), rota.begin(), rota.end());
+      const auto rotasAntesDoReparo = solucao.rotas;
+      if (!eliminaUmaRota(instance, solucao.rotas, demandaRota) &&
+          !reempacotaEmNumeroFixoDeRotas(
+              instance, rotasAntesDoReparo, solucao.rotas, demandaRota)) {
+        throw std::runtime_error(
+            "Clarke-Wright nao encontrou uma solucao dentro do limite de veiculos");
       }
-
-      std::sort(clientes.begin(), clientes.end(),
-                [&](int a, int b) {
-                  return instance.getNode(a).demanda > instance.getNode(b).demanda;
-                });
-
-      std::vector<std::vector<int>> rotasReempacotadas(instance.num_trucks);
-      std::vector<int> demandasReempacotadas(instance.num_trucks, 0);
-
-      if (empacotaPorDemanda(instance, clientes, rotasReempacotadas,
-                             demandasReempacotadas, 0)) {
-        for (auto& rota : rotasReempacotadas) {
-          ordenaRotaPorVizinhoMaisProximo(instance, rota);
-        }
-
-        rotasReempacotadas.erase(
-            std::remove_if(rotasReempacotadas.begin(), rotasReempacotadas.end(),
-                           [](const std::vector<int>& rota) { return rota.empty(); }),
-            rotasReempacotadas.end());
-        demandasReempacotadas.erase(
-            std::remove(demandasReempacotadas.begin(), demandasReempacotadas.end(), 0),
-            demandasReempacotadas.end());
-
-        solucao.rotas = rotasReempacotadas;
-        demandaRota = demandasReempacotadas;
-      }
-      break;
     }
   }
 
