@@ -4,6 +4,7 @@
 #include <chrono>
 #include <random>
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <utility>
 #include "metaheuristicas/vns.h"
@@ -21,6 +22,21 @@ static void limpaRotasVazias(Solution& solucao) {
         std::remove_if(solucao.rotas.begin(), solucao.rotas.end(),
             [](const std::vector<int>& rota) { return rota.empty(); }),
         solucao.rotas.end());
+}
+
+static int contaRotasAtivas(const Solution& solucao) {
+    return static_cast<int>(std::count_if(
+        solucao.rotas.begin(), solucao.rotas.end(),
+        [](const std::vector<int>& rota) { return !rota.empty(); }
+    ));
+}
+
+static int calculaKMaxAutomatico(const VRPInstance& instance, const Solution& solucao) {
+    const int clientes = std::max(1, static_cast<int>(instance.nodes.size()) - 1);
+    const int rotasAtivas = std::max(1, contaRotasAtivas(solucao));
+    const int intensidade = static_cast<int>(std::ceil(0.03 * clientes + 0.50 * rotasAtivas));
+
+    return std::clamp(intensidade, 4, 30);
 }
 
 Solution VND(Solution solucao, const VRPInstance& instance) {
@@ -90,13 +106,16 @@ Solution VNS(Solution solucao, const VRPInstance& instance, int kMax, double tem
 
     solucao.calculaCusto(instance);
     solucao = VND(solucao, instance);
+    if (kMax <= 0) {
+        kMax = calculaKMaxAutomatico(instance, solucao);
+    }
     Solution best = solucao;
     expRegistraMelhora(best.custoTotal);
     int k = 1;
     int iterSemMelhora = 0;
     int iteracao = 0;
 
-    std::cout << "VNS inicio | Custo: " << best.custoTotal << std::endl;
+    std::cout << "VNS inicio | Custo: " << best.custoTotal << " | kMax: " << kMax << std::endl;
 
     if (instance.optimal_value > 0 && best.custoTotal == instance.optimal_value) {
         std::cout << "VNS: Otimo encontrado em " << std::chrono::duration<double>(tempoBest - inicio).count() << "s" << std::endl;
@@ -112,17 +131,17 @@ Solution VNS(Solution solucao, const VRPInstance& instance, int kMax, double tem
         candidata = VND(candidata, instance);
         candidata.calculaCusto(instance);
 
-        bool melhorouBest = false;
+        bool melhorouSolucao = false;
         if (candidata.custoTotal < solucao.custoTotal) {
             solucao = candidata;
             k = 1;
+            melhorouSolucao = true;
 
             if (solucao.custoTotal < best.custoTotal) {
                 best = solucao;
                 expRegistraMelhora(best.custoTotal);
                 tempoBest = std::chrono::steady_clock::now();
                 iterSemMelhora = 0;
-                melhorouBest = true;
                 std::cout << "VNS iter " << iteracao << " | Melhor: " << best.custoTotal << " em " << std::chrono::duration<double>(tempoBest - inicio).count() << "s" << std::endl;
 
                 if (instance.optimal_value > 0 && best.custoTotal == instance.optimal_value) {
@@ -135,7 +154,11 @@ Solution VNS(Solution solucao, const VRPInstance& instance, int kMax, double tem
             if (k > kMax) k = 1;
         }
 
-        if (!melhorouBest) iterSemMelhora++;
+        if (melhorouSolucao) {
+            iterSemMelhora = 0;
+        } else {
+            iterSemMelhora++;
+        }
 
         if (iterSemMelhora >= iterSemMelhoraMax) {
             if (dist(gen) < 0.3) {
@@ -158,4 +181,8 @@ Solution VNS(Solution solucao, const VRPInstance& instance, int kMax, double tem
     std::cout << "VNS: Melhor=" << best.custoTotal << " em " << tempoMelhor << "s (total: " << tempoTotal << "s)" << std::endl;
 
     return best;
+}
+
+Solution VNS(Solution solucao, const VRPInstance& instance, double tempoLimite, int iterSemMelhoraMax) {
+    return VNS(std::move(solucao), instance, 0, tempoLimite, iterSemMelhoraMax);
 }

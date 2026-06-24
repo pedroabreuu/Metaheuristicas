@@ -4,6 +4,7 @@
 #include <chrono>
 #include <random>
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <numeric>
 #include <limits>
@@ -41,6 +42,34 @@ static void limpaRotasVazias(Solution& solucao) {
         solucao.rotas.end());
 }
 
+static int contaRotasAtivas(const Solution& solucao) {
+    return static_cast<int>(std::count_if(
+        solucao.rotas.begin(), solucao.rotas.end(),
+        [](const std::vector<int>& rota) { return !rota.empty(); }
+    ));
+}
+
+static int calculaBmaxAutomatico(const VRPInstance& instance, const Solution& solucao) {
+    const int clientes = std::max(1, static_cast<int>(instance.nodes.size()) - 1);
+    const int rotasAtivas = std::max(1, contaRotasAtivas(solucao));
+    const int intensidade = static_cast<int>(std::ceil(0.02 * clientes + 0.25 * rotasAtivas));
+
+    return std::clamp(intensidade, 3, 12);
+}
+
+static int calculaBmaxStuckAutomatico(
+    const VRPInstance& instance,
+    const Solution& solucao,
+    int Bmax
+) {
+    const int clientes = std::max(1, static_cast<int>(instance.nodes.size()) - 1);
+    const int rotasAtivas = std::max(1, contaRotasAtivas(solucao));
+    const int intensidade = static_cast<int>(std::ceil(0.06 * clientes + 0.75 * rotasAtivas));
+
+    const int limiteSuperior = std::max(30, Bmax + 2);
+    return std::clamp(intensidade, Bmax + 2, limiteSuperior);
+}
+
 static Solution buscaLocal(Solution solucao, const VRPInstance& instance, std::mt19937& gen) {
     limpaRotasVazias(solucao);
     std::vector<NeighborhoodFunc> vizinhancas = {
@@ -51,7 +80,7 @@ static Solution buscaLocal(Solution solucao, const VRPInstance& instance, std::m
         swapIntra,
         swapInter,
         // crossExchange,
-        // opt2Star
+        opt2Star
     };
 
     std::shuffle(vizinhancas.begin(), vizinhancas.end(), gen);
@@ -190,19 +219,26 @@ Solution ILS(
 ) {
     std::mt19937& gen = rngGlobal();
 
+    auto inicio = std::chrono::steady_clock::now();
+    auto tempoBest = inicio;
+
+    Solution s0 = clarkeWright(instance);
+    Solution s = buscaLocal(std::move(s0), instance, gen);
+
     Bmin = std::max(1, Bmin);
+    if (Bmax <= 0) {
+        Bmax = calculaBmaxAutomatico(instance, s);
+    }
     Bmax = std::max(Bmin, Bmax);
+    if (BmaxStuck <= 0) {
+        BmaxStuck = calculaBmaxStuckAutomatico(instance, s, Bmax);
+    }
     BmaxStuck = std::max(Bmax, BmaxStuck);
     const int baseBmin = Bmin;
     const int baseBmax = Bmax;
     int bMinAtual = Bmin;
     int bMaxAtual = Bmax;
 
-    auto inicio = std::chrono::steady_clock::now();
-    auto tempoBest = inicio;
-
-    Solution s0 = clarkeWright(instance);
-    Solution s = buscaLocal(std::move(s0), instance, gen);
     Solution best = s;
     expRegistraMelhora(best.custoTotal);
 
@@ -210,7 +246,9 @@ Solution ILS(
     int iteracao = 0;
     std::vector<double> pesosOperadores(7, 1.0);
 
-    std::cout << "ILS inicio | Custo: " << best.custoTotal << std::endl;
+    std::cout << "ILS inicio | Custo: " << best.custoTotal
+              << " | betaMax: " << Bmax
+              << " | BmaxStuck: " << BmaxStuck << std::endl;
 
     if (best.custoTotal == instance.optimal_value) {
         std::cout << "ILS: Otimo encontrado em " << std::chrono::duration<double>(tempoBest - inicio).count() << "s" << std::endl;

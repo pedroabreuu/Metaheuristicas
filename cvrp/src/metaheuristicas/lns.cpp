@@ -26,6 +26,37 @@ struct Construcao {
 using FuncDestruicao = std::function<ResultadoDestruicao(const Solution&, const VRPInstance&, double, double, std::mt19937&)>;
 using FuncConstrucao = std::function<Solution(const VRPInstance&, const Solution&, const std::vector<int>&)>;
 
+static void limpaRotasVazias(Solution& solucao) {
+    solucao.rotas.erase(
+        std::remove_if(solucao.rotas.begin(), solucao.rotas.end(),
+            [](const std::vector<int>& rota) { return rota.empty(); }),
+        solucao.rotas.end()
+    );
+}
+
+static double estimaTemperaturaInicial(const Solution& inicial, const VRPInstance& instance) {
+    Solution base = inicial;
+    base.calculaCusto(instance);
+    std::vector<double> deltas;
+    deltas.reserve(250);
+
+    for (int i = 0; i < 250; i++) {
+        Solution candidata = perturbar(base, instance, 1);
+        candidata.calculaCusto(instance);
+        double delta = static_cast<double>(candidata.custoTotal - base.custoTotal);
+        if (delta > 0.0) deltas.push_back(delta);
+    }
+
+    if (deltas.empty()) {
+        return std::max(1.0, 0.05 * static_cast<double>(base.custoTotal));
+    }
+
+    double media = 0.0;
+    for (double delta : deltas) media += delta;
+    media /= static_cast<double>(deltas.size());
+    return std::max(1.0, -media / std::log(0.80));
+}
+
 static Solution construirGuloso(const VRPInstance& instance, const Solution& solucao, const std::vector<int>& clientesRemovidos) {
     Solution copiaSolucao = solucao;
     Construcao resultado;
@@ -71,6 +102,7 @@ static Solution construirGuloso(const VRPInstance& instance, const Solution& sol
         }
     }
 
+    limpaRotasVazias(copiaSolucao);
     return copiaSolucao;
 }
 
@@ -151,6 +183,7 @@ static Solution construirRegret2(const VRPInstance& instance, const Solution& so
 
         naoInseridos.erase(naoInseridos.begin() + melhorClienteIdx);
     }
+    limpaRotasVazias(copiaSolucao);
     return copiaSolucao;
 }
 
@@ -169,7 +202,11 @@ static ResultadoDestruicao destruirAleatorio(const Solution& solucao, const VRPI
     }
 
     int nClientes = static_cast<int>(listaClientes.size());
-    if (nClientes == 0) return resultado;
+    if (nClientes == 0) {
+        limpaRotasVazias(copiaSolucao);
+        resultado.solucao = copiaSolucao;
+        return resultado;
+    }
     int quantosRemover = std::min(nClientes, std::max(1, static_cast<int>(rho * nClientes)));
 
     std::shuffle(listaClientes.begin(), listaClientes.end(), gen);
@@ -186,6 +223,7 @@ static ResultadoDestruicao destruirAleatorio(const Solution& solucao, const VRPI
         }
     }
 
+    limpaRotasVazias(copiaSolucao);
     resultado.solucao = copiaSolucao;
     return resultado;
 }
@@ -215,7 +253,11 @@ static ResultadoDestruicao destruirPiorCusto(const Solution& solucao, const VRPI
     }
 
     int nClientes = static_cast<int>(custosClientes.size());
-    if (nClientes == 0) return resultado;
+    if (nClientes == 0) {
+        limpaRotasVazias(copiaSolucao);
+        resultado.solucao = copiaSolucao;
+        return resultado;
+    }
 
     std::uniform_real_distribution<> intensidadeDestruicao(rhoMin, rhoMax);
     double rho = intensidadeDestruicao(gen);
@@ -246,6 +288,7 @@ static ResultadoDestruicao destruirPiorCusto(const Solution& solucao, const VRPI
         }
     }
 
+    limpaRotasVazias(copiaSolucao);
     resultado.solucao = copiaSolucao;
     return resultado;
 }
@@ -271,6 +314,10 @@ Solution LNS(const VRPInstance& instance, double tempoLimite, int iterSemMelhora
 
     Solution s = clarkeWright(instance);
     s.calculaCusto(instance);
+    if (tempInicial <= 0.0) {
+        tempInicial = estimaTemperaturaInicial(s, instance);
+    }
+
     Solution best = s;
     expRegistraMelhora(best.custoTotal);
 
@@ -280,7 +327,8 @@ Solution LNS(const VRPInstance& instance, double tempoLimite, int iterSemMelhora
     bool destruicaoForte = false;
     const int limiteEstagnacao = std::max(1, iterSemMelhoraMax);
 
-    std::cout << "ALNS inicio | Custo: " << best.custoTotal << std::endl;
+    std::cout << "ALNS inicio | Custo: " << best.custoTotal
+              << " | Temp inicial estimada: " << tempInicial << std::endl;
 
     if (best.custoTotal == instance.optimal_value) {
         std::cout << "ALNS: Otimo encontrado em " << std::chrono::duration<double>(tempoBest - inicio).count() << "s" << std::endl;
@@ -355,7 +403,7 @@ Solution LNS(const VRPInstance& instance, double tempoLimite, int iterSemMelhora
 
             for (size_t i = 0; i < pesosDestruicao.size(); i++) {
                 if (usosDestruicao[i] > 0) {
-                    pesosDestruicao[i] = (1.0 - r) * pesosDestruicao[i] + r * (scoresDestruicao[i]);
+                    pesosDestruicao[i] = (1.0 - r) * pesosDestruicao[i] + r * (scoresDestruicao[i] / usosDestruicao[i]);
                 }
                 scoresDestruicao[i] = 0.0;
                 usosDestruicao[i] = 0;

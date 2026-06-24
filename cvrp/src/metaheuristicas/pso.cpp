@@ -34,7 +34,7 @@ Solution PSO(const VRPInstance& instance, double tempoLimite,
     const int maxEstagnacaoGlobal = 200;
 
     auto avaliaGuia = [&](const std::vector<double>& x) -> Solution {
-        return decodeEBuscaLocal(x, instance);
+        return decodeSemBuscaLocal(x, instance);
     };
 
     std::vector<double> gbest; // melhor pos
@@ -55,20 +55,24 @@ Solution PSO(const VRPInstance& instance, double tempoLimite,
         }
     };
 
+    auto refinaGuia = [&](const std::vector<double>& x) {
+        Solution refinada = decodeEBuscaLocal(x, instance);
+        registraMelhor(refinada);
+    };
+
     for (Particula& p : enxame) {
         p.x.resize(D);
         p.v.assign(D, 0.0);
         for (double& xi : p.x) xi = u01(gen);
 
         Solution s = avaliaGuia(p.x);
-        encodeRandomKeys(s, instance, p.x);
-        registraMelhor(s);
         p.pbest = p.x;
         p.pbestFit = s.custoTotal;
 
         if (s.custoTotal < gbestGuiaFit) {
             gbestGuiaFit = s.custoTotal;
             gbest = p.x;
+            refinaGuia(gbest);
         }
     }
 
@@ -100,8 +104,6 @@ Solution PSO(const VRPInstance& instance, double tempoLimite,
             }
 
             Solution s = avaliaGuia(p.x);
-            encodeRandomKeys(s, instance, p.x);
-            registraMelhor(s);
 
             if (s.custoTotal < p.pbestFit) {
                 p.pbestFit = s.custoTotal;
@@ -113,6 +115,7 @@ Solution PSO(const VRPInstance& instance, double tempoLimite,
             if (s.custoTotal < gbestGuiaFit) {
                 gbestGuiaFit = s.custoTotal;
                 gbest = p.x;
+                refinaGuia(gbest);
             }
         }
 
@@ -128,13 +131,12 @@ Solution PSO(const VRPInstance& instance, double tempoLimite,
                 p.v.assign(D, 0.0);
                 p.estagnacao = 0;
                 Solution s = avaliaGuia(p.x);
-                encodeRandomKeys(s, instance, p.x);
-                registraMelhor(s);
                 p.pbest = p.x;
                 p.pbestFit = s.custoTotal;
                 if (s.custoTotal < gbestGuiaFit) {
                     gbestGuiaFit = s.custoTotal;
                     gbest = p.x;
+                    refinaGuia(gbest);
                 }
             }
         }
@@ -142,6 +144,10 @@ Solution PSO(const VRPInstance& instance, double tempoLimite,
         if (++iter % 50 == 0) {
             std::cout << "Iter " << iter << " | melhor: " << melhorFit << std::endl;
         }
+    }
+
+    if (!gbest.empty()) {
+        refinaGuia(gbest);
     }
 
     double tempoMelhor = std::chrono::duration<double>(tempoBest - inicio).count();

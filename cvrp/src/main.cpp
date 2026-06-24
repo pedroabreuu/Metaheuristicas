@@ -31,7 +31,7 @@ using Algoritmo = std::function<Solution(const VRPInstance&, double)>;
 static const std::map<std::string, Algoritmo>& registro() {
     static const std::map<std::string, Algoritmo> algos = {
         {"sa", [](const VRPInstance& inst, double tempo) {
-            return SimulatedAnnealing(solucaoInicial(inst), inst, tempo > 0 ? tempo : 300.0, 2000, 0.9995);
+            return SimulatedAnnealing(solucaoInicial(inst), inst, tempo > 0 ? tempo : 300.0, 2000, 0.999);
         }},
         {"ga", [](const VRPInstance& inst, double tempo) {
             int ger = tempo > 0 ? std::numeric_limits<int>::max() : 5000;
@@ -42,16 +42,16 @@ static const std::map<std::string, Algoritmo>& registro() {
             return BRKGA(inst, ger, 100, 10, 0.10, 0.70, tempo);
         }},
         {"vns", [](const VRPInstance& inst, double tempo) {
-            return VNS(solucaoInicial(inst), inst, 18, tempo > 0 ? tempo : 200.0, 200.0, 0.999, 200);
+            return VNS(clarkeWright(inst), inst, tempo > 0 ? tempo : 200.0, 1000);
         }},
         {"grasp", [](const VRPInstance& inst, double tempo) {
             return GRASP(inst, tempo > 0 ? tempo : 900.0);
         }},
         {"ils", [](const VRPInstance& inst, double tempo) {
-            return ILS(inst, tempo > 0 ? tempo : 180.0, 500, 1, 4, 14);
+            return ILS(inst, tempo > 0 ? tempo : 180.0, 1000);
         }},
         {"lns", [](const VRPInstance& inst, double tempo) {
-            return LNS(inst, tempo > 0 ? tempo : 720.0, 1000, 0.1, 0.5, 150.0, 0.995);
+            return LNS(inst, tempo > 0 ? tempo : 720.0, 1000, 0.1, 0.5, 0.0, 0.995);
         }},
         {"pso", [](const VRPInstance& inst, double tempo) {
             return PSO(inst, tempo > 0 ? tempo : 300.0, 30, 0.73, 1.5, 1.5, 0.3);

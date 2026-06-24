@@ -32,7 +32,7 @@ static Solution buscaLocalCompleta(Solution solucao, const VRPInstance& instance
         orOptInter3,
         swapIntra,
         swapInter,
-        crossExchange,
+        // crossExchange,
         opt2Star
     };
 
@@ -108,7 +108,9 @@ Solution SimulatedAnnealing(Solution solucao, const VRPInstance& instance, doubl
     double temp = tempInicial;
 
     std::vector<double> pesos(7, 1.0);
-    int iterSemMelhora = 0;
+    const int clientes = std::max(1, static_cast<int>(instance.nodes.size()) - 1);
+    const int limiteMovimentosSemMelhora = std::max(10000, 50 * clientes);
+    int movimentosSemMelhora = 0;
     int iteracao = 0;
 
     std::cout << "SA inicio | Custo: " << best.custoTotal
@@ -156,12 +158,10 @@ Solution SimulatedAnnealing(Solution solucao, const VRPInstance& instance, doubl
                 pesos[static_cast<size_t>(movimento)] += (delta <= 0) ? 0.08 : 0.02;
 
                 if (corrente.custoTotal < best.custoTotal) {
-                    if (corrente.custoTotal < best.custoTotal) {
                         best = corrente;
                         expRegistraMelhora(best.custoTotal);
                         tempoBest = std::chrono::steady_clock::now();
                         melhorouNaTemperatura = true;
-                        iterSemMelhora = 0;
 
                         std::cout << "SA iter " << iteracao
                                   << " | Melhor: " << best.custoTotal
@@ -175,7 +175,6 @@ Solution SimulatedAnnealing(Solution solucao, const VRPInstance& instance, doubl
                                       << "s" << std::endl;
                             return best;
                         }
-                    }
                 }
             } else {
                 pesos[static_cast<size_t>(movimento)] = std::max(0.20, pesos[static_cast<size_t>(movimento)] - 0.01);
@@ -183,16 +182,20 @@ Solution SimulatedAnnealing(Solution solucao, const VRPInstance& instance, doubl
             iteracao++;
         }
 
-        if (!melhorouNaTemperatura) iterSemMelhora++;
+        if (melhorouNaTemperatura) {
+            movimentosSemMelhora = 0;
+        } else {
+            movimentosSemMelhora += testados;
+        }
 
         double taxaAceitacao = (testados > 0) ? static_cast<double>(aceitos) / static_cast<double>(testados) : 0.0;
-        if (iterSemMelhora >= 6 || taxaAceitacao < 0.02) {
+        if (movimentosSemMelhora >= limiteMovimentosSemMelhora || taxaAceitacao < 0.02) {
             temp = std::max(temp, tempInicial * 0.25);
             corrente = best;
             corrente = movimentoAleatorio(std::move(corrente), instance, movDist(gen));
             corrente = movimentoAleatorio(std::move(corrente), instance, movDist(gen));
             corrente.calculaCusto(instance);
-            iterSemMelhora = 0;
+            movimentosSemMelhora = 0;
         } else {
             temp = std::max(tempMin, temp * alpha);
         }

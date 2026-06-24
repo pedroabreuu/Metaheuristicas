@@ -185,7 +185,7 @@ Solution decodeEBuscaLocal(const std::vector<double>& keys, const VRPInstance& i
         orOptInter3,
         swapIntra,
         swapInter,
-        crossExchange,
+        // crossExchange,
         opt2Star
     };
 

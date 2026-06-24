@@ -11,6 +11,7 @@
 #include <set>
 #include <utility>
 #include "core/Solution.h"
+#include "utils/CWSavings.h"
 #include "metaheuristicas/ga.h"
 #include "neighborhoods/2opt.h"
 #include "neighborhoods/2optStar.h"
@@ -18,6 +19,11 @@
 #include "neighborhoods/relocate.h"
 #include "neighborhoods/swap.h"
 #include "neighborhoods/crossE.h"
+
+namespace {
+constexpr double PROB_HERDAR_ROTA = 0.55;
+constexpr double PROB_BUSCA_LOCAL_FILHO = 0.45;
+}
 
 static Solution gerarSolucaoAleatoria(const VRPInstance& instance, std::mt19937& gen) {
 	std::vector<int> ids;
@@ -76,6 +82,23 @@ static void limpaRotasVazias(Solution& solucao) {
         solucao.rotas.end());
 }
 
+static Solution aplicarMutacaoAleatoria(Solution solucao, const VRPInstance& instance, int intensidade, std::mt19937& gen) {
+    std::uniform_int_distribution<int> movimento(0, 5);
+
+    for (int i = 0; i < intensidade; i++) {
+        switch (movimento(gen)) {
+            case 0: solucao = randomRelocate(std::move(solucao), instance); break;
+            case 1: solucao = randomOpt2(std::move(solucao), instance); break;
+            case 2: solucao = randomSwapIntra(std::move(solucao), instance); break;
+            case 3: solucao = randomSwapInter(std::move(solucao), instance); break;
+            case 4: solucao = randomOrOptInter(std::move(solucao), instance, 3); break;
+            default: solucao = randomOpt2Star(std::move(solucao), instance); break;
+        }
+    }
+
+    return solucao;
+}
+
 static int cargaRota(const std::vector<int>& rota, const VRPInstance& instance) {
     int carga = 0;
     for (int cliente : rota) carga += instance.getNode(cliente).demanda;
@@ -90,7 +113,7 @@ static Solution buscaLocalGA(Solution solucao, const VRPInstance& instance) {
         orOptInter3,
         swapIntra,
         swapInter,
-        crossExchange,
+        // crossExchange,
         opt2Star
     };
 
@@ -151,7 +174,7 @@ static Solution crossoverPreservaRotas(const Solution& pai1, const Solution& pai
 
     std::uniform_real_distribution<double> prob(0.0, 1.0);
     for (const auto& rota : rotasPai1) {
-        if (rota.empty() || prob(gen) > 0.55) continue;
+        if (rota.empty() || prob(gen) > PROB_HERDAR_ROTA) continue;
         int carga = cargaRota(rota, instance);
         if (carga > instance.capacity) continue;
         bool conflita = false;
@@ -221,9 +244,19 @@ Solution GeneticAlgorithm(const VRPInstance& instance, int numGeracoes, int tama
 	    std::mt19937& gen = rngGlobal();
     std::uniform_real_distribution<> probDist(0.0, 1.0);
 
-	for (int i = 0; i < tamanhoPopulacao; i++) {
-		solucoes.push_back(gerarSolucaoAleatoria(instance, gen));
-	}
+    const int sementesConstrutivas = std::max(1, tamanhoPopulacao / 10);
+    for (int i = 0; i < tamanhoPopulacao; i++) {
+        Solution inicial;
+        if (i < sementesConstrutivas) {
+            inicial = clarkeWright(instance);
+            if (i > 0) {
+                inicial = aplicarMutacaoAleatoria(std::move(inicial), instance, 1 + (i % 2), gen);
+            }
+        } else {
+            inicial = gerarSolucaoAleatoria(instance, gen);
+        }
+        solucoes.push_back(std::move(inicial));
+    }
 
 	for (size_t i = 0; i < solucoes.size(); i++) {
 		solucoes[i].calculaCusto(instance);
@@ -277,31 +310,35 @@ Solution GeneticAlgorithm(const VRPInstance& instance, int numGeracoes, int tama
 
 		    Solution filho;
 
-		    if (probDist(gen) < probCrossover && idx1 != idx2) {
-		        filho = crossoverPreservaRotas(solucoes[idx1], solucoes[idx2], instance, gen);
-			    } else {
+            if (probDist(gen) < probCrossover && idx1 != idx2) {
+                if (probDist(gen) < 0.5) {
+                    filho = crossoverPreservaRotas(solucoes[idx1], solucoes[idx2], instance, gen);
+                } else {
+                    filho = crossoverPreservaRotas(solucoes[idx2], solucoes[idx1], instance, gen);
+                }
+            } else {
 			        filho = solucoes[idx1];
 			        //limpaRotasVazias(filho);
 			        filho = swapIntra(std::move(filho), instance);
 			        filho = swapInter(std::move(filho), instance);
-			        // filho = opt2(filho, instance);
-			        filho = crossExchange(std::move(filho), instance);
+			        filho = opt2(filho, instance);
+			        // filho = crossExchange(std::move(filho), instance);
 			    }
 
                 double mutacaoAtual = probMutacao;
                 if (geracoesSemMelhora > 80) mutacaoAtual = std::min(0.85, probMutacao * 2.0);
                 if (geracoesSemMelhora > 160) mutacaoAtual = std::min(0.95, probMutacao * 3.0);
 
-			    if (probDist(gen) < mutacaoAtual) {
-		            filho = randomRelocate(std::move(filho), instance);
-		            filho = randomOpt2(std::move(filho), instance);
-		            filho = randomSwapIntra(std::move(filho), instance);
-		            filho = randomSwapInter(std::move(filho), instance);
-                    filho = randomOrOptInter(std::move(filho), instance, 3);
-                    filho = randomOpt2Star(std::move(filho), instance);
-	    	}
+                if (probDist(gen) < mutacaoAtual) {
+                    int intensidadeMutacao = 1;
+                    if (geracoesSemMelhora > 80) intensidadeMutacao = 2;
+                    if (geracoesSemMelhora > 160) intensidadeMutacao = 3;
+                    filho = aplicarMutacaoAleatoria(std::move(filho), instance, intensidadeMutacao, gen);
+                }
 
-	    	if (probDist(gen) < 0.45 || geracoesSemMelhora > 60) {
+                double probBuscaLocal = PROB_BUSCA_LOCAL_FILHO;
+                if (geracoesSemMelhora > 100) probBuscaLocal = 0.70;
+                if (probDist(gen) < probBuscaLocal) {
 
 	    		limpaRotasVazias(filho);
                 filho = buscaLocalGA(std::move(filho), instance);
@@ -349,7 +386,7 @@ Solution GeneticAlgorithm(const VRPInstance& instance, int numGeracoes, int tama
             geracoesSemMelhora++;
         }
 
-        if (geracoesSemMelhora > 0 && geracoesSemMelhora % 120 == 0) {
+        if (geracoesSemMelhora > 0 && geracoesSemMelhora % 300 == 0) {
             std::sort(solucoes.begin(), solucoes.end(),
                 [](const Solution& a, const Solution& b) { return a.custoTotal < b.custoTotal; });
             int reiniciar = std::max(1, tamanhoPopulacao * 30 / 100);

@@ -216,7 +216,7 @@ static Solution RVND(Solution solucao, const VRPInstance& instance, std::mt19937
         orOptIntra3,
         orOptInter3,
         swapIntra,
-        crossExchange,
+        // crossExchange,
         swapInter,
         opt2Star
     };
@@ -368,7 +368,6 @@ static Solution pathRelinking(const Solution& origem, const Solution& alvo, cons
 
 Solution GRASP(const VRPInstance& instance, double tempoLimiteSegundos) {
     std::mt19937& gen = rngGlobal();
-    std::uniform_real_distribution<double> distReal(0.0, 1.0);
 
     const double ALPHA_PERTURBADO = 0.55;
     std::vector<double> alphas = {0.0, 0.05, 0.1, 0.2, 0.35, 0.55};
@@ -379,11 +378,6 @@ Solution GRASP(const VRPInstance& instance, double tempoLimiteSegundos) {
     const int INTENSIDADE_INICIAL = 1;
     const int INTENSIDADE_MAX = 10;
     int intensidadePerturbacao = INTENSIDADE_INICIAL;
-
-    const double SA_TEMP_INICIAL = 200.0;
-    const double SA_ALPHA = 0.9995;
-    const double SA_TEMP_MIN = 0.1;
-    double temperatura = SA_TEMP_INICIAL;
 
     auto inicio = std::chrono::steady_clock::now();
     auto tempoBest = inicio;
@@ -420,8 +414,6 @@ Solution GRASP(const VRPInstance& instance, double tempoLimiteSegundos) {
             intensidadePerturbacao = std::min(intensidadePerturbacao + 1, INTENSIDADE_MAX);
             iteracoesSemMelhora = 0;
 
-            temperatura = SA_TEMP_INICIAL;
-
             std::cout << "GRASP perturbacao/reconstrucao (intensidade=" << intensidadePerturbacao - 1
                       << ", alpha=" << alpha
                       << ") | Custo: " << s.getCusto() << std::endl;
@@ -433,7 +425,8 @@ Solution GRASP(const VRPInstance& instance, double tempoLimiteSegundos) {
             s = RVND(s, instance, gen);
             s.calculaCusto(instance);
 
-            if (!elite.empty() && iteracao > 0 && iteracao % 25 == 0) {
+            if (!primeira && !elite.empty() && iteracao > 0 && iteracao % 25 == 0 &&
+                static_cast<double>(s.getCusto()) <= 1.05 * static_cast<double>(best.getCusto())) {
                 std::uniform_int_distribution<int> eliteDist(0, static_cast<int>(elite.size()) - 1);
                 Solution relink = pathRelinking(s, elite[static_cast<size_t>(eliteDist(gen))], instance, gen);
                 if (relink.getCusto() < s.getCusto()) {
@@ -479,16 +472,15 @@ Solution GRASP(const VRPInstance& instance, double tempoLimiteSegundos) {
             if (delta < 0) {
                 atual = s;
                 atualizaElite(elite, atual, MAX_ELITE);
+                auto alphaIt = std::find(alphas.begin(), alphas.end(), alpha);
+                if (alphaIt != alphas.end()) {
+                    pesosAlpha[static_cast<size_t>(std::distance(alphas.begin(), alphaIt))] += 0.5;
+                }
                 iteracoesSemMelhora = 0;
-            } else if (temperatura > SA_TEMP_MIN && distReal(gen) < std::exp(-delta / temperatura)) {
-                atual = s;
-                iteracoesSemMelhora++;
             } else {
                 iteracoesSemMelhora++;
             }
         }
-
-        temperatura = std::max(temperatura * SA_ALPHA, SA_TEMP_MIN);
         double somaPesosAlpha = 0.0;
         for (double peso : pesosAlpha) somaPesosAlpha += peso;
         if (somaPesosAlpha > 40.0) {

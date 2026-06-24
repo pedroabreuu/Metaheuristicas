@@ -23,7 +23,7 @@ echo "seeds:      $(echo $SEEDS | tr '\n' ' ')"
 echo "tempo:      ${TEMPO}s | jobs: $JOBS"
 
 if command -v parallel >/dev/null; then
-    parallel -j "$JOBS" --joblog "$OUT/joblog.tsv" --resume-failed --bar \
+    parallel -j "$JOBS" --joblog "$OUT/joblog.tsv" --resume --bar \
         "./build/cvrp {1} {2} {3} --tempo $TEMPO \
             --csv  $OUT/raw/{2}_{1/.}_{3}.csv \
             --traj $OUT/traj/{2}_{1/.}_{3}.csv \
